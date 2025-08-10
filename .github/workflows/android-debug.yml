@@ -1,0 +1,40 @@
+name: Android Debug APK (embedNoRecord)
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    env:
+      CI: true
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+          cache: gradle
+
+      - name: Gradle Build (assemble embedNoRecord debug)
+        uses: gradle/gradle-build-action@v2
+        with:
+          build-root-directory: android
+          arguments: >-
+            assembleEmbedNoRecordDebug
+            --stacktrace --warning-mode all
+            --no-daemon --parallel --build-cache --configuration-cache
+            -x lint -x test
+            -Pandroid.builder.sdkDownload=true
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: NeonInvaders-embedNoRecord-debug
+          path: android/love-android/app/build/outputs/apk/embedNoRecord/debug/*.apk
+          if-no-files-found: error
