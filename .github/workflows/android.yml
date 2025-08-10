@@ -1,0 +1,248 @@
+name: Android
+
+on:
+  push:
+    branches: ["**"]
+  pull_request:
+
+jobs:
+  debug:
+    name: Build Debug APK
+    runs-on: ubuntu-latest
+    env:
+      LOVE_ANDROID_REF: ${{ vars.LOVE_ANDROID_REF }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager --sdk_root="$ANDROID_SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            "ndk;25.2.9519653" \
+            "cmake;3.22.1" || true
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager --sdk_root="$ANDROID_SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            "ndk;25.2.9519653" \
+            "cmake;3.22.1" || true
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager --sdk_root="$ANDROID_SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            "ndk;25.2.9519653" \
+            "cmake;3.22.1" || true
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager --sdk_root="$ANDROID_SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            "ndk;25.2.9519653" \
+            "cmake;3.22.1" || true
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android SDK components
+        run: |
+          sdkmanager --sdk_root="$ANDROID_SDK_ROOT" \
+            "platform-tools" \
+            "platforms;android-34" \
+            "build-tools;34.0.0" \
+            "ndk;25.2.9519653" \
+            "cmake;3.22.1" || true
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Prepare love-android template
+        run: |
+          if [ -n "${LOVE_ANDROID_REF}" ]; then \
+            git clone --recurse-submodules --depth 1 -b "${LOVE_ANDROID_REF}" https://github.com/love2d/love-android android/love-android; \
+          else \
+            git clone --recurse-submodules --depth 1 https://github.com/love2d/love-android android/love-android; \
+          fi
+          mkdir -p android/love-android/app/src/main/assets
+      
+      - name: Set SDK versions (min 19, target/compile 34)
+        run: |
+          sed -i 's/compileSdkVersion [0-9][0-9]*/compileSdkVersion 34/' android/love-android/app/build.gradle || true
+          sed -i 's/targetSdkVersion [0-9][0-9]*/targetSdkVersion 34/' android/love-android/app/build.gradle || true
+          sed -i 's/minSdkVersion [0-9][0-9]*/minSdkVersion 19/' android/love-android/app/build.gradle || true
+
+      - name: Package game.love
+        run: |
+          zip -9 -r game.love . \
+            -x "android/*" \
+            -x ".git/*" \
+            -x ".github/*" \
+            -x "**/node_modules/*" \
+            -x "**/build/*" \
+            -x "**/dist/*"
+          cp game.love android/love-android/app/src/main/assets/game.love
+
+      - name: Apply package name and app name
+        run: |
+          sed -i "s/applicationId \"org.love2d.android\"/applicationId \"com.neoninvaders.game\"/" android/love-android/app/build.gradle
+          # Set app label to Neon Invaders if present in manifest
+          if [ -f android/love-android/app/src/main/AndroidManifest.xml ]; then \
+            sed -i 's/android:label="[^"]*"/android:label="Neon Invaders"/' android/love-android/app/src/main/AndroidManifest.xml; \
+          fi
+
+      - name: Copy placeholder icons
+        run: |
+          if [ -d android/icons ]; then \
+            mkdir -p android/love-android/app/src/main/res; \
+            cp -r android/icons/* android/love-android/app/src/main/res/; \
+          fi
+
+      - name: Inject signing config loader
+        run: |
+          echo "Applying signing-config.gradle reference"
+          if ! grep -q "signing-config.gradle" android/love-android/app/build.gradle; then \
+            echo "\napply from: '../../signing-config.gradle'\n" >> android/love-android/app/build.gradle; \
+          fi
+
+      - name: Build Debug APK
+        run: bash android/gradlew assembleDebug
+
+      - name: Upload Debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-debug-apk
+          path: |
+            android/love-android/app/build/outputs/apk/debug/*.apk
+
+  release:
+    name: Build Signed Release APK
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main'
+    permissions:
+      contents: read
+    env:
+      LOVE_ANDROID_REF: ${{ vars.LOVE_ANDROID_REF }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
+          restore-keys: |
+            ${{ runner.os }}-gradle-
+
+      - name: Prepare love-android template
+        run: |
+          if [ -n "${LOVE_ANDROID_REF}" ]; then \
+            git clone --recurse-submodules --depth 1 -b "${LOVE_ANDROID_REF}" https://github.com/love2d/love-android android/love-android; \
+          else \
+            git clone --recurse-submodules --depth 1 https://github.com/love2d/love-android android/love-android; \
+          fi
+          mkdir -p android/love-android/app/src/main/assets
+
+      - name: Package game.love
+        run: |
+          zip -9 -r game.love . \
+            -x "android/*" \
+            -x ".git/*" \
+            -x ".github/*" \
+            -x "**/node_modules/*" \
+            -x "**/build/*" \
+            -x "**/dist/*"
+          cp game.love android/love-android/app/src/main/assets/game.love
+
+      - name: Apply package name and app name
+        run: |
+          sed -i "s/applicationId \"org.love2d.android\"/applicationId \"com.neoninvaders.game\"/" android/love-android/app/build.gradle
+          if [ -f android/love-android/app/src/main/AndroidManifest.xml ]; then \
+            sed -i 's/android:label="[^"]*"/android:label="Neon Invaders"/' android/love-android/app/src/main/AndroidManifest.xml; \
+          fi
+
+      - name: Copy placeholder icons
+        run: |
+          if [ -d android/icons ]; then \
+            mkdir -p android/love-android/app/src/main/res; \
+            cp -r android/icons/* android/love-android/app/src/main/res/; \
+          fi
+
+      - name: Decode keystore and create properties
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > android/love-android/release.keystore
+          cat > android/love-android/keystore.properties <<EOF
+          storeFile=release.keystore
+          storePassword=${ANDROID_KEYSTORE_PASSWORD}
+          keyAlias=${ANDROID_KEY_ALIAS}
+          keyPassword=${ANDROID_KEY_PASSWORD}
+          EOF
+
+      - name: Inject signing config loader
+        run: |
+          echo "Applying signing-config.gradle reference"
+          if ! grep -q "signing-config.gradle" android/love-android/app/build.gradle; then \
+            echo "\napply from: '../../signing-config.gradle'\n" >> android/love-android/app/build.gradle; \
+          fi
+
+      - name: Build Signed Release APK
+        run: bash android/gradlew assembleRelease
+
+      - name: Try Build Release AAB (optional)
+        run: bash android/gradlew bundleRelease || echo "bundleRelease not available; skipping"
+
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-release
+          path: |
+            android/love-android/app/build/outputs/apk/release/*.apk
+            android/love-android/app/build/outputs/bundle/release/*.aab

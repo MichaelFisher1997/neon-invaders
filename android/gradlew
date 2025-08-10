@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# Proxy gradlew that ensures love-android is present then delegates
+set -euo pipefail
+SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" &> /dev/null && pwd)"
+ENGINE_DIR="$SCRIPT_DIR/love-android"
+
+if [ ! -d "$ENGINE_DIR" ]; then
+  echo "[gradlew-proxy] love-android not found; cloning template..."
+  git clone --depth 1 https://github.com/love2d/love-android "$ENGINE_DIR"
+fi
+
+# Ensure assets dir and package config
+mkdir -p "$ENGINE_DIR/app/src/main/assets"
+if grep -q "applicationId \"org.love2d.android\"" "$ENGINE_DIR/app/build.gradle"; then
+  sed -i "s/applicationId \"org.love2d.android\"/applicationId \"com.neoninvaders.game\"/" "$ENGINE_DIR/app/build.gradle"
+fi
+# Inject signing config loader (android/signing-config.gradle)
+if ! grep -q "signing-config.gradle" "$ENGINE_DIR/app/build.gradle"; then
+  printf "\napply from: '../../signing-config.gradle'\n" >> "$ENGINE_DIR/app/build.gradle"
+fi
+
+# Zip repo into game.love (exclude irrelevant dirs) and copy into assets
+REPO_ROOT="$SCRIPT_DIR/.."
+cd "$REPO_ROOT"
+zip -9 -r game.love . \
+  -x "android/love-android/*" \
+  -x ".git/*" \
+  -x ".github/*" \
+  -x "**/node_modules/*" \
+  -x "**/build/*" \
+  -x "**/dist/*"
+cp game.love "$ENGINE_DIR/app/src/main/assets/game.love"
+
+# Delegate to engine's gradlew
+cd "$ENGINE_DIR"
+exec ./gradlew "$@"

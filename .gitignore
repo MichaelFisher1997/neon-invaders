@@ -1,0 +1,26 @@
+# General
+.DS_Store
+Thumbs.db
+
+# LÖVE build artifact
+/game.love
+
+# Android engine project (cloned on demand)
+/android/love-android/
+
+# Android build outputs
+**/build/
+**/outputs/
+
+# IDE
+.vscode/
+.idea/
+
+# Keystore files (do NOT commit real keystores)
+android/release.keystore
+android/keystore.properties
+release.keystore
+release.keystore.b64
+
+# Node and other caches
+node_modules/
