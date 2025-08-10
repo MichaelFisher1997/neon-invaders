@@ -21,16 +21,24 @@ jobs:
           java-version: '17'
           cache: gradle
 
-      - name: Gradle Build (assemble embedNoRecord debug)
+      - name: Gradle Build (package embedNoRecord debug)
         uses: gradle/gradle-build-action@v2
         with:
           build-root-directory: android
           arguments: >-
-            assembleEmbedNoRecordDebug
-            --stacktrace --warning-mode all
+            :app:packageEmbedNoRecordDebug
+            --stacktrace --info --warning-mode all
             --no-daemon --parallel --build-cache --configuration-cache
             -x lint -x test
             -Pandroid.builder.sdkDownload=true
+
+      - name: Cache CMake/NDK build outputs
+        uses: actions/cache@v4
+        with:
+          path: |
+            android/love-android/app/.cxx
+            android/love-android/app/build/cxx
+          key: cmake-${{ runner.os }}-ndk-27.0.12077973-${{ hashFiles('android/love-android/app/src/main/cpp/CMakeLists.txt') }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
