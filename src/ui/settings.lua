@@ -2,7 +2,7 @@ local Settings = require("src.systems.settings")
 
 local UISettings = {}
 
-local slider = { width = 420, height = 12 }
+local slider = { width = 420, height = 16 }
 local selection = 1
 local entries = {
   { type = 'slider', key = 'musicVolume', label = 'Music' },
@@ -11,16 +11,25 @@ local entries = {
   { type = 'action', key = 'back', label = 'Save & Back' },
 }
 
+local draggingIndex = nil
+
 local function layoutRects(vw, vh)
   local x = vw/2 - slider.width/2
   local y = vh*0.30
   local lineH = 64
   local rects = {}
+  local boxW = 44 -- difficulty arrow box width
+  local padArrow = 12
   for i = 1, #entries do
     local rx = x - 24
     local ry = y + (i-1)*lineH - 12
     local rw = slider.width + 48
     local rh = 48
+    if entries[i].type == 'select' then
+      -- widen to include left/right arrow hit targets
+      rx = rx - (boxW + padArrow)
+      rw = rw + 2*(boxW + padArrow)
+    end
     rects[i] = {x=rx, y=ry, w=rw, h=rh, lineY = y + (i-1)*lineH}
   end
   return rects, x, y, lineH
@@ -28,6 +37,7 @@ end
 
 function UISettings.enter()
   selection = 1
+  draggingIndex = nil
 end
 
 local function drawSlider(x, y, value, label)
@@ -40,6 +50,13 @@ local function drawSlider(x, y, value, label)
   love.graphics.setColor(1,1,1,1)
   love.graphics.setFont(love.graphics.newFont(18))
   love.graphics.print(label .. string.format(": %d%%", math.floor(value*100 + 0.5)), x, y - 26)
+  -- knob handle for touch friendliness
+  local cx = x + w*value
+  local cy = y + h/2
+  love.graphics.setColor(1,1,1,1)
+  love.graphics.circle('fill', cx, cy, 8)
+  love.graphics.setColor(0,0,0,1)
+  love.graphics.circle('line', cx, cy, 8)
 end
 
 function UISettings.update(dt)
@@ -102,8 +119,25 @@ function UISettings.draw(vw, vh)
   for i,o in ipairs(opts) do if o==s.difficulty then idx=i end end
   love.graphics.setFont(love.graphics.newFont(22))
   love.graphics.setColor(1,1,1, selection==3 and 1 or 0.8)
-  local diffText = string.format("Difficulty: < %s >", opts[idx])
-  love.graphics.printf(diffText, 0, y + lineH*2 + 8, vw, 'center')
+  local diffY = y + lineH*2 + 8
+  local diffText = string.format("%s", opts[idx])
+  -- draw left/right arrow boxes for clearer touch targets
+  local centerX = vw/2
+  local boxW, boxH = 44, 36
+  local leftX = centerX - (slider.width/2) - boxW - 12
+  local rightX = centerX + (slider.width/2) + 12
+  -- Label
+  local labelY = diffY - 28
+  love.graphics.printf("Difficulty:", 0, labelY, vw, 'center')
+  -- Value box
+  love.graphics.setColor(1,1,1,1)
+  love.graphics.rectangle('line', centerX - 80, diffY - 4, 160, boxH, 8, 8)
+  love.graphics.printf(diffText, centerX - 80, diffY + 6, 160, 'center')
+  -- Arrows
+  love.graphics.rectangle('line', leftX, diffY - 4, boxW, boxH, 8, 8)
+  love.graphics.rectangle('line', rightX, diffY - 4, boxW, boxH, 8, 8)
+  love.graphics.printf('<', leftX, diffY + 6, boxW, 'center')
+  love.graphics.printf('>', rightX, diffY + 6, boxW, 'center')
 
   -- Back action
   love.graphics.setFont(love.graphics.newFont(22))
@@ -116,7 +150,7 @@ function UISettings.draw(vw, vh)
 
   love.graphics.setFont(love.graphics.newFont(14))
   love.graphics.setColor(1,1,1,0.7)
-  love.graphics.printf("Use Up/Down to select, Left/Right to adjust. Enter to confirm.", 0, vh*0.88, vw, 'center')
+  love.graphics.printf("Tap/drag sliders. Tap arrows to change difficulty. Enter or tap Back to save.", 0, vh*0.88, vw, 'center')
 end
 
 function UISettings.pointerPressed(vw, vh, lx, ly)
@@ -145,14 +179,24 @@ function UISettings.pointerPressed(vw, vh, lx, ly)
     local rel = (lx - barX) / slider.width
     s[entry.key] = snap(rel)
     require('src.audio.audio').play('ui_click')
+    draggingIndex = idx
     return nil
   elseif entry.type == 'select' then
-    -- Left half: previous, right half: next
-    local center = (rects[idx].x + rects[idx].w/2)
+    -- Left arrow, right arrow, or center cycles
     local opts = entry.options
     local cur = 1
     for i,o in ipairs(opts) do if o == s.difficulty then cur = i end end
-    if lx < center then cur = math.max(1, cur - 1) else cur = math.min(#opts, cur + 1) end
+    local centerX = vw/2
+    local boxW, boxH = 44, 36
+    local leftX = centerX - (slider.width/2) - boxW - 12
+    local rightX = centerX + (slider.width/2) + 12
+    if lx >= leftX and lx <= leftX + boxW then
+      cur = math.max(1, cur - 1)
+    elseif lx >= rightX and lx <= rightX + boxW then
+      cur = math.min(#opts, cur + 1)
+    else
+      cur = (cur % #opts) + 1
+    end
     s.difficulty = opts[cur]
     require('src.audio.audio').play('ui_click')
     return nil
@@ -161,6 +205,27 @@ function UISettings.pointerPressed(vw, vh, lx, ly)
     return 'back'
   end
   return nil
+end
+
+function UISettings.pointerMoved(vw, vh, lx, ly)
+  if not draggingIndex then return nil end
+  local s = Settings.get()
+  local _, x, y, lineH = layoutRects(vw, vh)
+  local barX = x
+  local rel = (lx - barX) / slider.width
+  -- snap during drag but with finer step
+  local v = math.max(0, math.min(1, rel))
+  local step = 0.01
+  v = math.floor(v/step + 0.5) * step
+  local entry = entries[draggingIndex]
+  if entry and entry.type == 'slider' then
+    s[entry.key] = v
+  end
+  return nil
+end
+
+function UISettings.pointerReleased()
+  draggingIndex = nil
 end
 
 return UISettings

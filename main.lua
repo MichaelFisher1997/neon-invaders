@@ -206,6 +206,34 @@ function love.mousepressed(x, y, button)
   end
 end
 
+function love.mousemoved(x, y, dx, dy, istouch)
+  if state.get() == "settings" then
+    local vx, vy = scaling.toVirtual(x, y)
+    local vw, vh = scaling.getVirtualSize()
+    settingsUI.pointerMoved(vw, vh, vx, vy)
+  end
+end
+
+function love.mousereleased(x, y, button)
+  if state.get() == "settings" then
+    settingsUI.pointerReleased()
+  end
+end
+
+function love.touchmoved(id, x, y, dx, dy, pressure)
+  if state.get() == "settings" then
+    local vx, vy = scaling.toVirtual(x, y)
+    local vw, vh = scaling.getVirtualSize()
+    settingsUI.pointerMoved(vw, vh, vx, vy)
+  end
+end
+
+function love.touchreleased(id, x, y, dx, dy, pressure)
+  if state.get() == "settings" then
+    settingsUI.pointerReleased()
+  end
+end
+
 function love.touchpressed(id, x, y, dx, dy, pressure)
   if state.get() == "play" and upgrades.isShowing() then
     local vx, vy = scaling.toVirtual(x, y)

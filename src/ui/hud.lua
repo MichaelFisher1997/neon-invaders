@@ -59,92 +59,38 @@ function HUD.draw(score, lives, wave, vw, vh)
 end
 
 function HUD.drawLeftControls(vw, vh)
-  -- Movement pad (left/right) combined into a single wide pad at bottom-left
-  local gap = math.floor(vw * 0.06 + 0.5)
-  local padW = vw - gap * 2
-  local padH = math.floor(vh * 0.22 + 0.5)
-  local x = gap
-  local y = vh - padH - gap
   local held = Input.getHeld()
-
-  -- Base
-  setColorA(COLORS.white, 0.08)
-  love.graphics.rectangle('fill', x, y, padW, padH, 12, 12)
-  setColorA(COLORS.white, 0.22)
-  love.graphics.setLineWidth(2)
-  love.graphics.rectangle('line', x, y, padW, padH, 12, 12)
-  glowRect(x, y, padW, padH, 12, COLORS.cyan)
-
-  -- Pressed halves highlight
-  if held.left then
-    setColorA(COLORS.cyan, 0.18)
-    love.graphics.rectangle('fill', x + 4, y + 4, padW/2 - 8, padH - 8, 10, 10)
-  end
-  if held.right then
-    setColorA(COLORS.cyan, 0.18)
-    love.graphics.rectangle('fill', x + padW/2 + 4, y + 4, padW/2 - 8, padH - 8, 10, 10)
-  end
-
-  -- divider
-  setColorA(COLORS.white, 0.20)
-  love.graphics.line(x + padW/2, y + 8, x + padW/2, y + padH - 8)
-  love.graphics.setLineWidth(1)
-
-  -- Arrows
-  setColorA(COLORS.white, held.left and 0.9 or 0.55)
-  local function arrowLeft(ax, ay, w, h)
-    love.graphics.polygon('fill', ax + w*0.66, ay + h*0.30, ax + w*0.36, ay + h*0.50, ax + w*0.66, ay + h*0.70)
-  end
-  local function arrowRight(ax, ay, w, h)
-    love.graphics.polygon('fill', ax + w*0.34, ay + h*0.30, ax + w*0.64, ay + h*0.50, ax + w*0.34, ay + h*0.70)
-  end
-  arrowLeft(x + 4, y + 4, padW/2 - 8, padH - 8)
-  setColorA(COLORS.white, held.right and 0.9 or 0.55)
-  arrowRight(x + padW/2 + 4, y + 4, padW/2 - 8, padH - 8)
-
+  -- Entire panel: MOVE LEFT
+  -- Base overlay
+  setColorA(COLORS.white, held.left and 0.20 or 0.08)
+  love.graphics.rectangle('fill', 0, 0, vw, vh)
+  -- Big left arrow centered
+  local ax, ay, aw, ah = vw*0.10, vh*0.25, vw*0.80, vh*0.50
+  setColorA(COLORS.white, held.left and 0.95 or 0.70)
+  love.graphics.polygon('fill', ax + aw*0.66, ay + ah*0.30, ax + aw*0.36, ay + ah*0.50, ax + aw*0.66, ay + ah*0.70)
   -- Label
   setColorA(COLORS.cyan, 0.85)
-  love.graphics.setFont(love.graphics.newFont(14))
-  local label = 'MOVE'
+  love.graphics.setFont(love.graphics.newFont(16))
+  local label = 'MOVE LEFT'
   local tw = love.graphics.getFont():getWidth(label)
-  love.graphics.print(label, x + (padW - tw)/2, y - 18)
+  love.graphics.print(label, (vw - tw)/2, vh*0.06)
 end
 
 function HUD.drawRightControls(vw, vh)
-  -- Hold-to-fire circle on the right panel
-  local gap = math.floor(vw * 0.06 + 0.5)
-  -- Spec: diameter ≈ 68% of panel width => radius ≈ 34%
-  local fireR = math.max(22, math.floor(vw * 0.34 + 0.5))
-  local cx = vw - fireR - gap
-  local cy = vh - fireR - gap
   local held = Input.getHeld()
-  local rr = held.fire and math.floor(fireR * 1.05 + 0.5) or fireR
-
-  -- Base
-  setColorA(COLORS.white, 0.08)
-  love.graphics.circle('fill', cx, cy, rr)
-  setColorA(COLORS.white, 0.26)
-  love.graphics.setLineWidth(2)
-  love.graphics.circle('line', cx, cy, rr)
-  glowCircle(cx, cy, rr, COLORS.magenta)
-
-  -- Pressed fill
-  if held.fire then
-    setColorA(COLORS.magenta, 0.20)
-    love.graphics.circle('fill', cx, cy, rr - 3)
-  end
-
-  -- Simple "bullet" triangle icon
-  setColorA(COLORS.white, held.fire and 0.95 or 0.70)
-  love.graphics.polygon('fill', cx, cy - rr*0.28, cx - rr*0.16, cy + rr*0.12, cx + rr*0.16, cy + rr*0.12)
-  love.graphics.setLineWidth(1)
-
-  -- label
+  -- Entire panel: MOVE RIGHT
+  setColorA(COLORS.white, held.right and 0.20 or 0.08)
+  love.graphics.rectangle('fill', 0, 0, vw, vh)
+  -- Big right arrow centered
+  local ax, ay, aw, ah = vw*0.10, vh*0.25, vw*0.80, vh*0.50
+  setColorA(COLORS.white, held.right and 0.95 or 0.70)
+  love.graphics.polygon('fill', ax + aw*0.34, ay + ah*0.30, ax + aw*0.64, ay + ah*0.50, ax + aw*0.34, ay + ah*0.70)
+  -- Label
   setColorA(COLORS.magenta, 0.85)
-  love.graphics.setFont(love.graphics.newFont(14))
-  local label = 'HOLD TO FIRE'
+  love.graphics.setFont(love.graphics.newFont(16))
+  local label = 'MOVE RIGHT'
   local tw = love.graphics.getFont():getWidth(label)
-  love.graphics.print(label, cx - tw / 2, cy - fireR - 18)
+  love.graphics.print(label, (vw - tw)/2, vh*0.06)
 end
 
 function HUD.drawPanelFrame(vw, vh)
