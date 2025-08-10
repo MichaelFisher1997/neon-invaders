@@ -14,6 +14,17 @@ jobs:
         with:
           submodules: recursive
 
+      - name: Build .love package
+        shell: bash
+        run: |
+          zip -9 -r game.love . \
+            -x "android/**" \
+            -x ".git/**" \
+            -x ".github/**" \
+            -x "**/node_modules/**" \
+            -x "**/build/**" \
+            -x "**/dist/**"
+
       - name: Build love android
         id: build-love
         uses: love-actions/love-actions-android@v2
@@ -23,7 +34,7 @@ jobs:
           resource-path: "android/icons"
           # icon-specifier: "@mipmap/ic_launcher"
           love-ref: "11.5"
-          love-package: "android/love-android/app/src/main/assets/game.love"
+          love-package: "game.love"
           product-name: "neon-invaders"
           version-string: "12.0"
           version-code: 33
