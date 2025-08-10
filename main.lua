@@ -80,6 +80,7 @@ function love.keypressed(key)
 end
 
 function love.update(dt)
+  scaling.update()
   input.update(dt)
   starfield.update(dt)
   screenshake.update(dt)

@@ -16,7 +16,6 @@ Source of truth: `SPECS.md`. Keep items small, tick as delivered, and note chang
 - [x] Player system (move, shoot, cooldown, lives)
 - [x] Bullet manager (player/enemy pools)
 - [x] Alien grid (spawn, march, edge-step, speed ramp)
-- [ ] Enemy fire logic (timers scaled by wave)
 - [x] Enemy fire logic (timers scaled by wave)
 - [x] Collision detection (bullets vs aliens & player)
 - [x] Explosions (`fx/particles.lua`) and screen shake (`fx/screenshake.lua`)
@@ -25,9 +24,7 @@ Source of truth: `SPECS.md`. Keep items small, tick as delivered, and note chang
 
 ## Milestone C: Meta & Progression
 - [x] Wave manager (difficulty curve) with difficulty multipliers
-- [ ] Boss entity (HP, pattern, hitbox) every 5 waves
 - [x] Boss entity (HP, pattern, hitbox) every 5 waves — basic spread pattern
-- [ ] Upgrade menu between waves (+move, +firerate, +life, +shield)
 - [x] Upgrade menu between waves — basic 4-option selector; applies immediately
 
 ## Milestone D: UI/UX

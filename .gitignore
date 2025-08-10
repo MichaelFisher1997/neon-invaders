@@ -12,6 +12,9 @@ Thumbs.db
 **/build/
 **/outputs/
 
+# Web export (love.js bundle and artifacts)
+/web/
+
 # IDE
 .vscode/
 .idea/
@@ -24,3 +27,18 @@ release.keystore.b64
 
 # Node and other caches
 node_modules/
+
+# Gradle and Android native build caches
+.gradle/
+**/.gradle/
+**/.cxx/
+
+# Local Android SDK pointers (generated)
+android/love-android/local.properties
+
+# Built Android packages
+**/*.apk
+**/*.aab
+
+# Python
+__pycache__/

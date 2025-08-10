@@ -6,15 +6,31 @@ local VIRTUAL_HEIGHT = 720
 local canvas
 local scaleX, scaleY, scaleUniform
 local offsetX, offsetY
+local lastW, lastH
 
-local function recomputeScale(windowWidth, windowHeight)
-  scaleX = windowWidth / VIRTUAL_WIDTH
-  scaleY = windowHeight / VIRTUAL_HEIGHT
+local function getDisplayDimensions()
+  local w, h = love.graphics.getDimensions()
+  local dpi = 1
+  if love.window and love.window.getDPIScale then
+    dpi = love.window.getDPIScale()
+  elseif love.graphics and love.graphics.getDPIScale then
+    dpi = love.graphics.getDPIScale()
+  end
+  -- Convert framebuffer pixels to CSS/display pixels
+  w = math.floor(w / dpi + 0.5)
+  h = math.floor(h / dpi + 0.5)
+  return w, h
+end
+
+local function recomputeScale(displayWidth, displayHeight)
+  scaleX = displayWidth / VIRTUAL_WIDTH
+  scaleY = displayHeight / VIRTUAL_HEIGHT
   scaleUniform = math.min(scaleX, scaleY)
   local drawWidth = VIRTUAL_WIDTH * scaleUniform
   local drawHeight = VIRTUAL_HEIGHT * scaleUniform
-  offsetX = math.floor((windowWidth - drawWidth) / 2 + 0.5)
-  offsetY = math.floor((windowHeight - drawHeight) / 2 + 0.5)
+  offsetX = math.floor((displayWidth - drawWidth) / 2 + 0.5)
+  offsetY = math.floor((displayHeight - drawHeight) / 2 + 0.5)
+  lastW, lastH = displayWidth, displayHeight
 end
 
 function Scaling.getVirtualSize()
@@ -41,14 +57,24 @@ function Scaling.toScreen(x, y)
   return sx, sy
 end
 
-function Scaling.resize(windowWidth, windowHeight)
-  recomputeScale(windowWidth, windowHeight)
+function Scaling.resize(_windowWidth, _windowHeight)
+  -- On some platforms the callback sizes are framebuffer pixels; recompute from actual display size
+  local w, h = getDisplayDimensions()
+  recomputeScale(w, h)
+end
+
+-- Some mobile browsers don’t emit resize reliably; poll for size changes
+function Scaling.update()
+  local w, h = getDisplayDimensions()
+  if w ~= lastW or h ~= lastH then
+    recomputeScale(w, h)
+  end
 end
 
 function Scaling.setup()
   love.graphics.setDefaultFilter("nearest", "nearest", 1)
   canvas = love.graphics.newCanvas(VIRTUAL_WIDTH, VIRTUAL_HEIGHT)
-  local w, h = love.graphics.getDimensions()
+  local w, h = getDisplayDimensions()
   recomputeScale(w, h)
 end
 

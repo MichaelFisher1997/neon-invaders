@@ -39,7 +39,12 @@ if [ -n "$SDK_DIR" ]; then
   ESC="$SDK_DIR"
   ESC="${ESC//\\/\\\\}"
   ESC="${ESC// /\\ }"
-  printf "sdk.dir=%s\n" "$ESC" > "$ENGINE_DIR/local.properties"
+  PROP="$ENGINE_DIR/local.properties"
+  # Preserve existing entries (e.g. ndk.dir) and only add sdk.dir if missing
+  touch "$PROP"
+  if ! grep -q '^sdk\.dir=' "$PROP" 2>/dev/null; then
+    printf "sdk.dir=%s\n" "$ESC" >> "$PROP"
+  fi
 fi
 
 # Zip repo into game.love (exclude irrelevant dirs) and copy into assets
