@@ -135,8 +135,11 @@ jobs:
       - name: Inject signing config loader
         run: |
           echo "Applying signing-config.gradle reference"
-          if ! grep -q "signing-config.gradle" android/love-android/app/build.gradle; then \
-            echo "\napply from: '../../signing-config.gradle'\n" >> android/love-android/app/build.gradle; \
+          # Remove any accidental literal \n lines from previous runs
+          sed -i "/\\\napply from: '..\/..\/signing-config.gradle'\\\n/d" android/love-android/app/build.gradle || true
+          if ! grep -q "signing-config.gradle" android/love-android/app/build.gradle; then
+            # Append with real newlines
+            printf '\n%s\n' "apply from: '../../signing-config.gradle'" >> android/love-android/app/build.gradle
           fi
 
       - name: Build Debug APK
@@ -201,7 +204,7 @@ jobs:
         run: |
           sed -i "s/applicationId \"org.love2d.android\"/applicationId \"com.neoninvaders.game\"/" android/love-android/app/build.gradle
           if [ -f android/love-android/app/src/main/AndroidManifest.xml ]; then \
-            sed -i 's/android:label="[^"]*"/android:label="Neon Invaders"/' android/love-android/app/src/main/AndroidManifest.xml; \
+            sed -i 's/android:label="[^\"]*"/android:label="Neon Invaders"/' android/love-android/app/src/main/AndroidManifest.xml; \
           fi
 
       - name: Copy placeholder icons
@@ -229,8 +232,11 @@ jobs:
       - name: Inject signing config loader
         run: |
           echo "Applying signing-config.gradle reference"
-          if ! grep -q "signing-config.gradle" android/love-android/app/build.gradle; then \
-            echo "\napply from: '../../signing-config.gradle'\n" >> android/love-android/app/build.gradle; \
+          # Remove any accidental literal \n lines from previous runs
+          sed -i "/\\\napply from: '..\/..\/signing-config.gradle'\\\n/d" android/love-android/app/build.gradle || true
+          if ! grep -q "signing-config.gradle" android/love-android/app/build.gradle; then
+            # Append with real newlines
+            printf '\n%s\n' "apply from: '../../signing-config.gradle'" >> android/love-android/app/build.gradle
           fi
 
       - name: Build Signed Release APK

@@ -6,7 +6,11 @@ ENGINE_DIR="$SCRIPT_DIR/love-android"
 
 if [ ! -d "$ENGINE_DIR" ]; then
   echo "[gradlew-proxy] love-android not found; cloning template..."
-  git clone --depth 1 https://github.com/love2d/love-android "$ENGINE_DIR"
+  if [ -n "${LOVE_ANDROID_REF:-}" ]; then
+    git clone --recurse-submodules --depth 1 -b "$LOVE_ANDROID_REF" https://github.com/love2d/love-android "$ENGINE_DIR"
+  else
+    git clone --recurse-submodules --depth 1 https://github.com/love2d/love-android "$ENGINE_DIR"
+  fi
 fi
 
 # Ensure assets dir and package config
@@ -17,6 +21,25 @@ fi
 # Inject signing config loader (android/signing-config.gradle)
 if ! grep -q "signing-config.gradle" "$ENGINE_DIR/app/build.gradle"; then
   printf "\napply from: '../../signing-config.gradle'\n" >> "$ENGINE_DIR/app/build.gradle"
+fi
+
+# Ensure Android SDK is configured for local builds by writing local.properties
+SDK_DIR="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+if [ -z "$SDK_DIR" ]; then
+  # Try common defaults on Linux/macOS
+  for cand in "$HOME/Android/Sdk" "$HOME/Library/Android/sdk"; do
+    if [ -d "$cand" ]; then
+      SDK_DIR="$cand"
+      break
+    fi
+  done
+fi
+if [ -n "$SDK_DIR" ]; then
+  # Escape backslashes and spaces for Gradle properties format
+  ESC="$SDK_DIR"
+  ESC="${ESC//\\/\\\\}"
+  ESC="${ESC// /\\ }"
+  printf "sdk.dir=%s\n" "$ESC" > "$ENGINE_DIR/local.properties"
 fi
 
 # Zip repo into game.love (exclude irrelevant dirs) and copy into assets
