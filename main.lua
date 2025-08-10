@@ -160,3 +160,36 @@ function love.draw()
     input.drawDebug()
   end
 end
+
+-- Handle mouse/touch selection for upgrade overlay (desktop + mobile)
+function love.mousepressed(x, y, button)
+  if state.get() == "play" and upgrades.isShowing() then
+    local vx, vy = scaling.toVirtual(x, y)
+    local leftPanel, centerPanel = scaling.getPanelsVirtual()
+    local lx = vx - centerPanel.x
+    local ly = vy - centerPanel.y
+    if lx >= 0 and lx <= centerPanel.w and ly >= 0 and ly <= centerPanel.h then
+      if upgrades.pointerPressed(centerPanel.w, centerPanel.h, lx, ly) then
+        local Player = require('src.game.player')
+        upgrades.applyTo(Player)
+      end
+    end
+    return
+  end
+end
+
+function love.touchpressed(id, x, y, dx, dy, pressure)
+  if state.get() == "play" and upgrades.isShowing() then
+    local vx, vy = scaling.toVirtual(x, y)
+    local leftPanel, centerPanel = scaling.getPanelsVirtual()
+    local lx = vx - centerPanel.x
+    local ly = vy - centerPanel.y
+    if lx >= 0 and lx <= centerPanel.w and ly >= 0 and ly <= centerPanel.h then
+      if upgrades.pointerPressed(centerPanel.w, centerPanel.h, lx, ly) then
+        local Player = require('src.game.player')
+        upgrades.applyTo(Player)
+      end
+    end
+    return
+  end
+end

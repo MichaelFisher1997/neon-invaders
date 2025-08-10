@@ -39,6 +39,57 @@ function Upgrades.applyTo(player)
   active.showing = false
 end
 
+-- Touch support: hit-test cards in the center viewport local space (0..vw, 0..vh)
+-- Returns true if a card was hit and selected
+function Upgrades.pointerPressed(vw, vh, lx, ly)
+  if not active.showing then return false end
+
+  -- Layout params (must match draw())
+  local pad = 24
+  local gapX, gapY = 20, 20
+  local minCardW, maxCardW = 160, 260
+  local aspect = 120/260
+  -- Use same fonts to get exact heights
+  local titleFont = love.graphics.newFont(28)
+  local helpFont = love.graphics.newFont(16)
+
+  -- Determine columns that fit
+  local bestCols = #choices
+  for cols = #choices, 2, -1 do
+    local cw = math.floor((vw - 2*pad - (cols-1)*gapX) / cols)
+    if cw >= minCardW then bestCols = cols; break end
+  end
+  local cols = bestCols
+  local rows = math.ceil(#choices / cols)
+  local cardW = math.min(maxCardW, math.floor((vw - 2*pad - (cols-1)*gapX) / cols))
+  local cardH = math.floor(cardW * aspect)
+
+  local gridW = cols*cardW + (cols-1)*gapX
+  local startX = math.floor((vw - gridW)/2 + 0.5)
+
+  -- Vertical placement
+  local helpY = vh - pad - helpFont:getHeight()
+  local gridTop = math.floor(vh*0.32)
+  local gridH = rows*cardH + (rows-1)*gapY
+  local maxGridTop = helpY - gridH - pad
+  if gridTop > maxGridTop then gridTop = math.max(pad + titleFont:getHeight() + 8, maxGridTop) end
+
+  -- Iterate cards and hit-test
+  for i, _ in ipairs(choices) do
+    local idx = i-1
+    local r = math.floor(idx / cols)
+    local col = idx % cols
+    local x = startX + col*(cardW + gapX)
+    local y = gridTop + r*(cardH + gapY)
+    if lx >= x and lx <= x + cardW and ly >= y and ly <= y + cardH then
+      active.selected = i
+      return true
+    end
+  end
+
+  return false
+end
+
 function Upgrades.draw(vw, vh)
   if not active.showing then return end
   -- Dim center viewport only (drawn inside center viewport via caller)
@@ -99,7 +150,11 @@ function Upgrades.draw(vw, vh)
 
   love.graphics.setFont(helpFont)
   love.graphics.setColor(1,1,1,0.85)
-  love.graphics.printf('Left/Right (or Tab) to choose, Enter to confirm', 0, helpY, vw, 'center')
+  local os = (love.system and love.system.getOS) and love.system.getOS() or ""
+  local helpText = (os == "Android" or os == "iOS")
+    and 'Tap a card to choose'
+    or 'Left/Right (or Tab) to choose, Enter to confirm'
+  love.graphics.printf(helpText, 0, helpY, vw, 'center')
 end
 
 return Upgrades
