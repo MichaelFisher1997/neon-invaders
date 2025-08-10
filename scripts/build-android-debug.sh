@@ -49,38 +49,83 @@ NDK_DIR="${ANDROID_NDK_HOME:-}"
 if [ -n "$SDK_DIR" ]; then
   SDK_DIR_ABS="$(readlink -f "$SDK_DIR" 2>/dev/null || realpath "$SDK_DIR" 2>/dev/null || echo "$SDK_DIR")"
   echo "[info] Using Android SDK at: $SDK_DIR_ABS"
+  # If NDK env var is not set or invalid, try to auto-discover within the SDK
+  if [ -z "$NDK_DIR" ] || [ ! -d "$NDK_DIR" ]; then
+    if [ -d "$SDK_DIR_ABS/ndk" ]; then
+      CAND=$(ls -1d "$SDK_DIR_ABS/ndk"/* 2>/dev/null | head -n 1 || true)
+      if [ -n "$CAND" ] && [ -d "$CAND" ]; then
+        NDK_DIR="$CAND"
+      fi
+    fi
+    if [ -z "$NDK_DIR" ] || [ ! -d "$NDK_DIR" ]; then
+      if [ -d "$SDK_DIR_ABS/ndk-bundle" ]; then
+        NDK_DIR="$SDK_DIR_ABS/ndk-bundle"
+      fi
+    fi
+    # Fallback scan: find any NDK under SDK with source.properties
+    if [ -z "$NDK_DIR" ] || [ ! -d "$NDK_DIR" ]; then
+      CAND=$(find "$SDK_DIR_ABS" -maxdepth 4 -type f -name source.properties -path "*/ndk/*/source.properties" 2>/dev/null | head -n 1 || true)
+      if [ -n "$CAND" ]; then
+        NDK_DIR="$(dirname "$CAND")"
+      fi
+    fi
+    # Fallback scan: locate ndk-build binary
+    if [ -z "$NDK_DIR" ] || [ ! -d "$NDK_DIR" ]; then
+      CAND=$(find "$SDK_DIR_ABS" -maxdepth 4 -type f -name ndk-build 2>/dev/null | head -n 1 || true)
+      if [ -n "$CAND" ]; then
+        NDK_DIR="$(dirname "$CAND")"
+      fi
+    fi
+  fi
   : > "$TEMPLATE_DIR/local.properties"
   printf 'sdk.dir=%s\n' "$SDK_DIR_ABS" >> "$TEMPLATE_DIR/local.properties"
+  # Always remove stale ndk.dir before optionally re-adding it
+  sed -i '/^ndk\.dir=/d' "$TEMPLATE_DIR/local.properties" 2>/dev/null || true
   : > "$ANDROID_DIR/local.properties"
   printf 'sdk.dir=%s\n' "$SDK_DIR_ABS" >> "$ANDROID_DIR/local.properties"
+  sed -i '/^ndk\.dir=/d' "$ANDROID_DIR/local.properties" 2>/dev/null || true
   if [ -n "$NDK_DIR" ]; then
     NDK_DIR_ABS="$(readlink -f "$NDK_DIR" 2>/dev/null || realpath "$NDK_DIR" 2>/dev/null || echo "$NDK_DIR")"
     echo "[info] Using Android NDK at: $NDK_DIR_ABS"
-    # Create a project-local symlink so Gradle won't try to write into the read-only Nix store
-    NDK_LINK="$TEMPLATE_DIR/.ndk"
-    rm -f "$NDK_LINK" && ln -s "$NDK_DIR_ABS" "$NDK_LINK"
-    printf 'ndk.dir=%s\n' "$NDK_LINK" >> "$TEMPLATE_DIR/local.properties"
-    printf 'android.ndkPath=%s\n' "$NDK_LINK" >> "$TEMPLATE_DIR/local.properties" || true
-    printf 'ndk.dir=%s\n' "$NDK_LINK" >> "$ANDROID_DIR/local.properties"
-    printf 'android.ndkPath=%s\n' "$NDK_LINK" >> "$ANDROID_DIR/local.properties" || true
-    # Also export env vars that AGP/CMake may read
-    export ANDROID_NDK="$NDK_LINK"
-    export ANDROID_NDK_HOME="$NDK_LINK"
-    export ANDROID_NDK_ROOT="$NDK_LINK"
+    if [ -d "$NDK_DIR_ABS" ]; then
+      # Clean any stale ndk.dir/android.ndkPath entries to prevent CXX1102 errors
+      sed -i '/^ndk\.dir=/d' "$TEMPLATE_DIR/local.properties" 2>/dev/null || true
+      sed -i '/^ndk\.dir=/d' "$ANDROID_DIR/local.properties" 2>/dev/null || true
+      # Explicitly set ndk.dir to the absolute NDK path (not a symlink)
+      printf 'ndk.dir=%s\n' "$NDK_DIR_ABS" >> "$TEMPLATE_DIR/local.properties"
+      printf 'ndk.dir=%s\n' "$NDK_DIR_ABS" >> "$ANDROID_DIR/local.properties"
+      # Optionally export env vars; AGP primarily uses sdk.dir + ndkVersion
+      export ANDROID_NDK="$NDK_DIR_ABS"
+      export ANDROID_NDK_HOME="$NDK_DIR_ABS"
+      export ANDROID_NDK_ROOT="$NDK_DIR_ABS"
+      # Detect actual NDK version from source.properties or path basename
+      NDK_VER_DETECTED=""
+      if [ -f "$NDK_DIR_ABS/source.properties" ]; then
+        NDK_VER_DETECTED="$(sed -n 's/^Pkg.Revision=\(.*\)$/\1/p' "$NDK_DIR_ABS/source.properties" | tr -d '[:space:]' | head -n1)"
+      fi
+      if [ -z "$NDK_VER_DETECTED" ]; then
+        NDK_VER_DETECTED="$(basename "$NDK_DIR_ABS" | tr -d '[:space:]')"
+      fi
+      echo "[info] Detected NDK version: ${NDK_VER_DETECTED:-unknown}"
+    else
+      echo "[warn] NDK path does not exist: $NDK_DIR_ABS; skipping ndk.dir/android.ndkPath writes"
+    fi
     # Also hint AGP to use the exact NDK version to avoid installs
     if [ -f "$TEMPLATE_DIR/app/build.gradle" ]; then
       # Replace ndkVersion whether it's single- or double-quoted
-      sed -i -E "s/(ndkVersion\s+['\"]).*(['\"]).*/\127.0.12077973\2/" "$TEMPLATE_DIR/app/build.gradle" || true
+      sed -i -E "s/(ndkVersion\s+['\"]).*(['\"]).*/\1${NDK_VER_DETECTED:-27.0.12077973}\2/" "$TEMPLATE_DIR/app/build.gradle" || true
+      # Inject into android { } block when it's missing
       if ! grep -q "ndkVersion" "$TEMPLATE_DIR/app/build.gradle" 2>/dev/null; then
-        # Inject into android { } block
-        sed -i '/^android[[:space:]]*{.*/a \\    ndkVersion "27.0.12077973"' "$TEMPLATE_DIR/app/build.gradle" || true
-        echo "android.ndkVersion=27.0.12077973" >> "$TEMPLATE_DIR/gradle.properties"
-        echo "android.ndkVersion=27.0.12077973" >> "$ANDROID_DIR/gradle.properties"
+        sed -i "/^android[[:space:]]*{.*/a \\    ndkVersion \"${NDK_VER_DETECTED:-27.0.12077973}\"" "$TEMPLATE_DIR/app/build.gradle" || true
       fi
     else
-      echo "android.ndkVersion=27.0.12077973" >> "$TEMPLATE_DIR/gradle.properties"
-      echo "android.ndkVersion=27.0.12077973" >> "$ANDROID_DIR/gradle.properties"
+      : # Module build file is absent; continue with properties hints below
     fi
+    # Always provide android.ndkVersion as a backup hint in both gradle.properties files
+    sed -i '/^android\.ndkVersion=/d' "$TEMPLATE_DIR/gradle.properties" 2>/dev/null || true
+    sed -i '/^android\.ndkVersion=/d' "$ANDROID_DIR/gradle.properties" 2>/dev/null || true
+    echo "android.ndkVersion=${NDK_VER_DETECTED:-27.0.12077973}" >> "$TEMPLATE_DIR/gradle.properties"
+    echo "android.ndkVersion=${NDK_VER_DETECTED:-27.0.12077973}" >> "$ANDROID_DIR/gradle.properties"
     # For hermetic builds: prevent AGP from attempting to download SDK components
     if ! grep -q "android.builder.sdkDownload" "$TEMPLATE_DIR/gradle.properties" 2>/dev/null; then
       echo "android.builder.sdkDownload=false" >> "$TEMPLATE_DIR/gradle.properties"
@@ -88,12 +133,13 @@ if [ -n "$SDK_DIR" ]; then
     if ! grep -q "android.builder.sdkDownload" "$ANDROID_DIR/gradle.properties" 2>/dev/null; then
       echo "android.builder.sdkDownload=false" >> "$ANDROID_DIR/gradle.properties"
     fi
-    # Ensure gradle.properties also contains the NDK path
-    if ! grep -q "^android.ndkPath=" "$TEMPLATE_DIR/gradle.properties" 2>/dev/null; then
-      echo "android.ndkPath=$NDK_LINK" >> "$TEMPLATE_DIR/gradle.properties"
-    fi
-    if ! grep -q "^android.ndkPath=" "$ANDROID_DIR/gradle.properties" 2>/dev/null; then
-      echo "android.ndkPath=$NDK_LINK" >> "$ANDROID_DIR/gradle.properties"
+    # Always remove stale android.ndkPath first
+    sed -i '/^android\.ndkPath=/d' "$TEMPLATE_DIR/gradle.properties" 2>/dev/null || true
+    sed -i '/^android\.ndkPath=/d' "$ANDROID_DIR/gradle.properties" 2>/dev/null || true
+    # Set android.ndkPath to the real NDK path (not a symlink) if it exists
+    if [ -d "$NDK_DIR_ABS" ]; then
+      echo "android.ndkPath=$NDK_DIR_ABS" >> "$TEMPLATE_DIR/gradle.properties"
+      echo "android.ndkPath=$NDK_DIR_ABS" >> "$ANDROID_DIR/gradle.properties"
     fi
   fi
 else
@@ -119,6 +165,30 @@ fi
 if [ -d "$ANDROID_DIR/icons" ]; then
   mkdir -p "$TEMPLATE_DIR/app/src/main/res"
   cp -r "$ANDROID_DIR/icons/"* "$TEMPLATE_DIR/app/src/main/res/" || true
+fi
+
+# Diagnostics: verify NDK presence and expected layout
+EXPECTED_NDK_VER="27.0.12077973"
+if [ -n "${SDK_DIR_ABS:-}" ]; then
+  EXPECTED_NDK_DIR="$SDK_DIR_ABS/ndk/$EXPECTED_NDK_VER"
+  echo "[diag] SDK dir: $SDK_DIR_ABS"
+  echo "[diag] Expected NDK: $EXPECTED_NDK_DIR"
+  if [ -d "$EXPECTED_NDK_DIR" ]; then
+    echo "[diag] Found expected NDK directory."
+    if [ -f "$EXPECTED_NDK_DIR/source.properties" ]; then
+      echo "[diag] NDK source.properties (first lines):"
+      sed -n '1,20p' "$EXPECTED_NDK_DIR/source.properties" || true
+    fi
+    if [ -d "$EXPECTED_NDK_DIR/toolchains/llvm/prebuilt" ]; then
+      echo "[diag] LLVM prebuilt toolchains present:"
+      ls -1 "$EXPECTED_NDK_DIR/toolchains/llvm/prebuilt" || true
+    else
+      echo "[warn] LLVM prebuilt toolchains directory missing under expected NDK."
+    fi
+  else
+    echo "[warn] Expected NDK dir not found; listing available entries under $SDK_DIR_ABS/ndk (if any):"
+    ls -la "$SDK_DIR_ABS/ndk" 2>/dev/null || echo "[diag] No side-by-side NDKs under SDK."
+  fi
 fi
 
 # Build Debug APK (uses android/gradlew wrapper)

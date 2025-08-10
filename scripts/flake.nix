@@ -16,12 +16,12 @@
             android_sdk.accept_license = true;
           };
         };
-        ndkVer = "27.1.12297006";
+        ndkVer = "27.0.12077973";
         android = pkgs.androidenv.composeAndroidPackages {
           platformVersions = [ "34" ];
           buildToolsVersions = [ "34.0.0" ];
           cmakeVersions = [ "3.22.1" ];
-          ndkVersion = ndkVer; # r27b to match love-android
+          ndkVersion = ndkVer; # r27 to match AGP preferred
           includeEmulator = false;
           includeSources = false;
           includeSystemImages = false;
