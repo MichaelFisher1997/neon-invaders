@@ -18,10 +18,16 @@ Neon Invaders is a premium, small-scope, retro arcade shooter inspired by Space 
 ## 3. Virtual Resolution & Scaling
 - Target virtual size: 1280×720. Game logic, UI layout, and touch hitboxes computed in virtual space.
 - Device scaling: render to a virtual canvas, then scale uniformly to fit device; center with letterboxing (black bars). Maintain aspect ratio.
-- Coordinate conversion helpers:
+- GameBoy-style layout in landscape: the virtual canvas is divided into three vertical panels by width:
+  - Left panel (controls): 20% of width (256 px at 1280)
+  - Center panel (game viewport): 60% of width (768 px at 1280)
+  - Right panel (controls): 20% of width (256 px at 1280)
+  The center panel is the playable viewport. All gameplay world rendering and HUD are confined within this viewport region.
+- Coordinate helpers:
   - toVirtual(x_screen, y_screen) → (x_virtual, y_virtual)
   - toScreen(x_virtual, y_virtual) → (x_screen, y_screen)
-- HUD/touch layout use percentages of the virtual resolution.
+  - toViewport(x_virtual, y_virtual) and fromViewport(x_view, y_view) to convert between center-viewport space and full-virtual space.
+- HUD/touch layout use percentages of their respective panels (left/right or center viewport), not the full canvas.
 
 ## 4. Game States (State Machine)
 - Title: Logo, Start, Settings, Quit; animated starfield background.
@@ -122,7 +128,8 @@ Types are written informally; all coordinates in virtual units unless noted.
 - Ramps by wave (w = 1-based):
   - formationSpeed(w) = 60 + 10 * (w - 1)
   - enemyFireRate(w) = 0.6 + 0.08 * (w - 1)
-  - cols/rows: start 8×3, add +1 col every 2 waves (cap 12), +1 row every 3 waves (cap 6)
+  - columns: start 8, add +1 col every 2 waves (cap 12)
+  - rows: start at 1 on wave 1; add +1 row each wave (cap 6). Maintain a safety buffer so the formation bottom stays at least two row-heights above the player; when rows increase, stack upward (toward top) rather than encroaching on the player.
   - stepDown: constant 24 (may +4 on Hard)
 - Boss every 5th wave:
   - hpMax(w) = 20 + 8 * floor(w/5)
@@ -151,20 +158,22 @@ Types are written informally; all coordinates in virtual units unless noted.
 ## 9. UI/UX Layout
 - Title
   - Logo text centered top third; buttons stacked with 2% vertical spacing.
-- HUD
-  - Score top-left: margin 2% of width/height
-  - Lives centered top: small ship icons spaced 32 px virtual
-  - Wave top-right: margin 2%
+- GameBoy-style landscape UI (Playing state)
+  - Left panel (controls, 20% width): two large rectangular buttons stacked vertically or side-by-side for Left and Right. Recommended layout:
+    - Left button: bottom-left of left panel, width 80% of panel width, height 32% of panel height, 4% panel margin
+    - Right button: bottom-right of left panel, same size; gap 4% panel width between buttons
+  - Center viewport (60% width): game world rendering area. HUD is drawn within this viewport:
+    - Score: top-left inside viewport (2% viewport margin)
+    - Lives: centered at top inside viewport (ship icons)
+    - Wave: top-right inside viewport (2% viewport margin)
+  - Right panel (controls, 20% width): Fire button
+    - Circular fire button at bottom-right of right panel, diameter ≈ 68% of panel width, margin 6% of panel width/height.
 - Pause Overlay
-  - Dim rectangle (black with 50% alpha), menu centered.
+  - Dim rectangle (black with 50% alpha), menu centered in the full canvas; blocks input to panels.
 - Game Over
-  - Final score large at center; Retry/Quit buttons below.
+  - Final score large at center; Retry/Quit buttons below; high score list shown below.
 - Settings
-  - Sliders for Music/SFX volumes; Difficulty radio buttons.
-- Touch Controls (virtual-relative)
-  - Left zone: 0%–35% width, full height
-  - Right zone: 35%–70% width, full height
-  - Fire button: bottom-right; diameter ≈ 15% of screen width; margin 3%
+  - Sliders for Music/SFX volumes; Difficulty selector; operates in full canvas space.
 
 ## 10. Visual Style
 - Palette (RGBA in hex):
@@ -174,6 +183,7 @@ Types are written informally; all coordinates in virtual units unless noted.
   - Purple: #8a2be2
   - White: #ffffff
 - Effects: subtle 6–12 px screen shake on hits; particle bursts on kills.
+ - UI Panels: side panels are slightly darker overlays (e.g., white at 10–15% alpha outlines, faint fill) to resemble a retro handheld frame while keeping the center viewport dominant.
 
 ## 11. Audio
 - SFX events → ids
@@ -195,7 +205,7 @@ Types are written informally; all coordinates in virtual units unless noted.
 - Player can move, fire; aliens march and step down; bullets collide; lives & score update.
 - Waves ramp; boss spawns on wave 5 with extra HP & pattern.
 - Between-wave upgrade prompt appears and applies effect.
-- HUD always readable; touch controls scale on simulated small/large resolutions.
+- HUD always readable; game HUD is confined to the center viewport; touch controls are visible in side panels and scale proportionally with device size.
 - SFX for shoot/hit/explosion/UI; music loop togglable; volume sliders work.
 - Local high score list updates after Game Over.
 
@@ -203,6 +213,11 @@ Types are written informally; all coordinates in virtual units unless noted.
 - Update order per frame: input.update → game.update → collisions.resolve → fx.update → ui.update
 - Pooled bullets and particles to avoid GC spikes.
 - Modules are small and single-purpose; most helpers are pure.
+
+### 13.1 Current Build Variant (2025-08-09)
+- Aliens march horizontally with step-down at edges within the center viewport; space is reserved on both sides so they do not spawn pinned to an edge.
+- Alien size: 36×22 virtual units; formation is centered and constrained within the center game screen.
+- Rows progression deviates from the original draft: waves now start at 1 row and add +1 row each wave (up to 6), stacking upward to preserve at least two row-heights of clearance above the player.
 
 ## 14. Source of Truth
 This document is the authoritative spec. If a mechanic changes during development, update this spec first, then implement.

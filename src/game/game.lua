@@ -7,6 +7,7 @@ local Waves = require("src.game.waves")
 local Banner = require("src.ui.banner")
 local Boss = require("src.game.boss")
 local Upgrades = require("src.game.upgrades")
+local scaling = require("src.systems.scaling")
 
 local Game = {}
 
@@ -26,9 +27,10 @@ function Game.init(vw, vh)
   score = 0
   wave = 1
   isGameOver = false
-  Player.init(VIRTUAL_WIDTH, VIRTUAL_HEIGHT)
-  Bullets.init(VIRTUAL_WIDTH, VIRTUAL_HEIGHT)
-  Aliens.init(VIRTUAL_WIDTH, VIRTUAL_HEIGHT)
+  local _, center, _ = scaling.getPanelsVirtual()
+  Player.init(center.w, center.h)
+  Bullets.init(center.w, center.h)
+  Aliens.init(center.w, center.h)
   Particles.init()
   enemyFireCooldown = 0
   -- Apply difficulty-based player bonus lives for Easy
@@ -154,14 +156,15 @@ function Game.update(dt, input)
         wave = wave + 1
         local nextCfg = Waves.configFor(wave)
         Bullets.clear('enemy')
-        Aliens.respawnFromConfig(nextCfg, Player.y)
+    Aliens.respawnFromConfig(nextCfg, Player.y)
         bossSpawned = false
         waveGraceTimer = 1.0
       end
     else
       -- Boss not yet spawned; spawn only after aliens cleared
       if Aliens.allCleared() then
-        Boss.spawnFromConfig(cfg, VIRTUAL_WIDTH, VIRTUAL_HEIGHT)
+        local _, center, _ = scaling.getPanelsVirtual()
+        Boss.spawnFromConfig(cfg, center.w, center.h)
         bossSpawned = true
       end
     end
@@ -203,8 +206,9 @@ function Game.draw()
   if Boss.exists() then Boss.draw() end
   Player.draw()
   Particles.draw()
-  -- Banner on top
-  Banner.draw(VIRTUAL_WIDTH, VIRTUAL_HEIGHT)
+  -- Banner on top, constrained to center viewport size
+  local _, center, _ = scaling.getPanelsVirtual()
+  Banner.draw(center.w, center.h)
 end
 
 function Game.getHUD()

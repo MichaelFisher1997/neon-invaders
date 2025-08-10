@@ -62,4 +62,13 @@ function HUD.drawTouchHints(vw, vh)
   love.graphics.circle('line', fireCx, fireCy, fireR)
 end
 
+function HUD.drawPanelFrame(vw, vh)
+  love.graphics.setColor(1,1,1,0.06)
+  love.graphics.rectangle('fill', 0, 0, vw, vh)
+  love.graphics.setColor(1,1,1,0.18)
+  love.graphics.setLineWidth(2)
+  love.graphics.rectangle('line', 2, 2, vw-4, vh-4, 8, 8)
+  love.graphics.setLineWidth(1)
+end
+
 return HUD

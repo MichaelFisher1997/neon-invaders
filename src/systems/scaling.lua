@@ -68,4 +68,27 @@ function Scaling.finish()
   love.graphics.pop()
 end
 
+-- Panels in virtual coordinates: left 20%, center 60%, right 20%
+function Scaling.getPanelsVirtual()
+  local lw = math.floor(VIRTUAL_WIDTH * 0.20 + 0.5)
+  local cw = math.floor(VIRTUAL_WIDTH * 0.60 + 0.5)
+  local rw = VIRTUAL_WIDTH - lw - cw
+  local h = VIRTUAL_HEIGHT
+  local left = { x = 0, y = 0, w = lw, h = h }
+  local center = { x = lw, y = 0, w = cw, h = h }
+  local right = { x = lw + cw, y = 0, w = rw, h = h }
+  return left, center, right
+end
+
+function Scaling.pushViewport(rect)
+  love.graphics.push()
+  love.graphics.setScissor(rect.x, rect.y, rect.w, rect.h)
+  love.graphics.translate(rect.x, rect.y)
+end
+
+function Scaling.popViewport()
+  love.graphics.setScissor()
+  love.graphics.pop()
+end
+
 return Scaling

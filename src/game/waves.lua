@@ -20,7 +20,8 @@ function Waves.configFor(waveIndex)
   local formationSpeed = baseSpeed * mult.speed
   local enemyFireRate = (0.6 + 0.08 * (waveIndex - 1)) * mult.fire
   local cols = math.min(12, 8 + math.floor((waveIndex-1)/2))
-  local rows = math.min(6, 3 + math.floor((waveIndex-1)/3))
+  -- Start with 1 row and add +1 each wave up to 6; placement will ensure a 2-row safety buffer from the player
+  local rows = math.min(6, 1 + (waveIndex - 1))
   local stepDown = 24 + mult.stepDownAdd
   local isBoss = (waveIndex % 5 == 0)
   return {

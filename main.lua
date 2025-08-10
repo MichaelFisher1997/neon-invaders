@@ -107,37 +107,49 @@ end
 function love.draw()
   scaling.begin()
 
-  -- Background
-  starfield.draw()
-
   local vw, vh = scaling.getVirtualSize()
+  local leftPanel, centerPanel, rightPanel = scaling.getPanelsVirtual()
   local cur = state.get()
+
+  -- Draw background only in center viewport to avoid space behind controls
+  scaling.pushViewport(centerPanel)
+  starfield.draw()
+  scaling.popViewport()
+
   if cur == "title" then
     title.draw(vw, vh)
   elseif cur == "settings" then
     settingsUI.draw(vw, vh)
-  elseif cur == "play" then
-    screenshake.apply()
-    game.draw()
-    screenshake.pop()
-    local score, lives, wave = game.getHUD()
-    hud.draw(score, lives, wave, vw, vh)
-    -- Draw percent-based touch hints in virtual space
-    hud.drawTouchHints(vw, vh)
-    if upgrades.isShowing() then upgrades.draw(vw, vh) end
-  elseif cur == "pause" then
-    screenshake.apply()
-    game.draw()
-    screenshake.pop()
-    local score, lives, wave = game.getHUD()
-    hud.draw(score, lives, wave, vw, vh)
-    pauseUI.draw(vw, vh)
-  elseif cur == "gameover" then
-    screenshake.apply()
-    game.draw()
-    screenshake.pop()
-    local score = select(1, game.getHUD())
-    gameoverUI.draw(score, vw, vh)
+  else
+    -- Center viewport for gameplay states
+    scaling.pushViewport(centerPanel)
+    if cur == "play" or cur == "pause" or cur == "gameover" then
+      screenshake.apply()
+      -- draw world relative to center viewport origin
+      game.draw()
+      screenshake.pop()
+      local score, lives, wave = game.getHUD()
+      hud.draw(score, lives, wave, centerPanel.w, centerPanel.h)
+      if cur == "pause" then
+        pauseUI.draw(centerPanel.w, centerPanel.h)
+      elseif cur == "gameover" then
+        local scoreOnly = select(1, game.getHUD())
+        gameoverUI.draw(scoreOnly, centerPanel.w, centerPanel.h)
+      end
+      if upgrades.isShowing() then upgrades.draw(centerPanel.w, centerPanel.h) end
+    end
+    scaling.popViewport()
+
+    -- Side panels frame + hints
+    -- Always draw framed side panels; draw hints during play
+    scaling.pushViewport(leftPanel)
+    hud.drawPanelFrame(leftPanel.w, leftPanel.h)
+    if cur == "play" then hud.drawTouchHints(leftPanel.w, leftPanel.h) end
+    scaling.popViewport()
+    scaling.pushViewport(rightPanel)
+    hud.drawPanelFrame(rightPanel.w, rightPanel.h)
+    if cur == "play" then hud.drawTouchHints(rightPanel.w, rightPanel.h) end
+    scaling.popViewport()
   end
 
   scaling.finish()

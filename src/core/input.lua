@@ -17,18 +17,27 @@ local prev = {
 local function clamp(x, a, b) return math.max(a, math.min(b, x)) end
 
 local function getTouchZones()
-  -- Compute in screen space; map touches to virtual using scaling
-  local sw, sh = love.graphics.getDimensions()
-  local fireDiameter = math.floor(sw * 0.15 + 0.5)
-  local margin = math.floor(sw * 0.03 + 0.5)
-  local fireRadius = fireDiameter / 2
-  local fireCx = sw - margin - fireRadius
-  local fireCy = sh - margin - fireRadius
-  return {
-    left = { x = 0, y = 0, w = sw * 0.35, h = sh },
-    right = { x = sw * 0.35, y = 0, w = sw * 0.35, h = sh },
-    fire = { x = fireCx, y = fireCy, r = fireRadius },
-  }
+  -- Compute in virtual space using panel layout, then map to screen for hit testing
+  local scale, ox, oy = scaling.getScale()
+  local vw, vh = scaling.getVirtualSize()
+  local leftPanel, centerPanel, rightPanel = scaling.getPanelsVirtual()
+  local gap = vw * 0.02
+  local btnW = leftPanel.w * 0.42
+  local btnH = leftPanel.h * 0.28
+  local padY = vh - btnH - gap
+  local leftBtn = { x = leftPanel.x + gap, y = padY, w = btnW, h = btnH }
+  local rightBtn = { x = leftPanel.x + gap + btnW + gap, y = padY, w = btnW, h = btnH }
+  local fireR = rightPanel.w * 0.34
+  local fire = { x = rightPanel.x + rightPanel.w - fireR - gap, y = vh - fireR - gap, r = fireR }
+
+  -- Convert to screen-space for touch hit-testing
+  local function toScreenRect(r)
+    return { x = r.x * scale + ox, y = r.y * scale + oy, w = r.w * scale, h = r.h * scale }
+  end
+  local function toScreenCircle(c)
+    return { x = c.x * scale + ox, y = c.y * scale + oy, r = c.r * scale }
+  end
+  return { left = toScreenRect(leftBtn), right = toScreenRect(rightBtn), fire = toScreenCircle(fire) }
 end
 
 local held = {

@@ -39,6 +39,7 @@ Source of truth: `SPECS.md`. Keep items small, tick as delivered, and note chang
   - [x] Difficulty is a proper left/right selector
 - [ ] Touch controls (left/right zones + fire button ~15% width)
   - [x] Subtle on-screen touch hints for zones/buttons
+  - [x] GameBoy-style panels and viewport; gameplay confined to center; touch hitboxes aligned to side panels
 
 ## Milestone E: Polish
 - [ ] Particle bursts on kills; brief screen shake on player hit
@@ -65,3 +66,5 @@ Source of truth: `SPECS.md`. Keep items small, tick as delivered, and note chang
 - [C] Wave manager with difficulty-aware curves; applied extra life on Easy; added wave-cleared banner.
 - [E] Local high scores (top 5) with auto-submit and display on Game Over.
 - [E] Audio: synthesized SFX and simple looping music; wired to settings volumes.
+- [B/D] Aliens resized to fit center viewport and now descend vertically-only (no horizontal marching); formation centering and scaling fixed within center game screen.
+- [B/C/D] Restored horizontal marching with edge step-down; reserved side motion space; waves now start at 1 row and add +1 row each wave (cap 6), stacking upward to preserve a 2-row buffer above the player.

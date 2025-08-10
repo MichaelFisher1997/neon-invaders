@@ -41,22 +41,55 @@ end
 
 function Upgrades.draw(vw, vh)
   if not active.showing then return end
+  -- Dim center viewport only (drawn inside center viewport via caller)
   love.graphics.setColor(0,0,0,0.6)
   love.graphics.rectangle('fill', 0, 0, vw, vh)
-  love.graphics.setColor(1,1,1,1)
-  love.graphics.setFont(love.graphics.newFont(28))
-  love.graphics.printf('Choose an Upgrade', 0, vh*0.32, vw, 'center')
 
-  local cardW, cardH = 260, 120
-  local gap = 28
-  local totalW = #choices*cardW + (#choices-1)*gap
-  local startX = (vw - totalW)/2
-  for i,c in ipairs(choices) do
-    local x = startX + (i-1)*(cardW+gap)
-    local y = vh*0.46
+  -- Typography
+  local titleFont = love.graphics.newFont(28)
+  local bodyFont = love.graphics.newFont(18)
+  local helpFont = love.graphics.newFont(16)
+  love.graphics.setColor(1,1,1,1)
+  love.graphics.setFont(titleFont)
+  love.graphics.printf('Choose an Upgrade', 0, math.floor(vh*0.20), vw, 'center')
+
+  -- Responsive card layout within center viewport
+  local pad = 24
+  local gapX, gapY = 20, 20
+  local minCardW, maxCardW = 160, 260
+  local aspect = 120/260
+
+  -- Determine columns that fit
+  local bestCols = #choices
+  for cols = #choices, 2, -1 do
+    local cw = math.floor((vw - 2*pad - (cols-1)*gapX) / cols)
+    if cw >= minCardW then bestCols = cols; break end
+  end
+  local cols = bestCols
+  local rows = math.ceil(#choices / cols)
+  local cardW = math.min(maxCardW, math.floor((vw - 2*pad - (cols-1)*gapX) / cols))
+  local cardH = math.floor(cardW * aspect)
+
+  local gridW = cols*cardW + (cols-1)*gapX
+  local startX = math.floor((vw - gridW)/2 + 0.5)
+
+  -- Vertical placement: title, grid, help
+  local helpY = vh - pad - helpFont:getHeight()
+  local gridTop = math.floor(vh*0.32)
+  local gridH = rows*cardH + (rows-1)*gapY
+  -- If grid would collide with help text, push it up
+  local maxGridTop = helpY - gridH - pad
+  if gridTop > maxGridTop then gridTop = math.max(pad + titleFont:getHeight() + 8, maxGridTop) end
+
+  for i, c in ipairs(choices) do
+    local idx = i-1
+    local r = math.floor(idx / cols)
+    local col = idx % cols
+    local x = startX + col*(cardW + gapX)
+    local y = gridTop + r*(cardH + gapY)
     love.graphics.setColor(1,1,1, i==active.selected and 1 or 0.7)
     love.graphics.rectangle('line', x, y, cardW, cardH, 10, 10)
-    love.graphics.setFont(love.graphics.newFont(18))
+    love.graphics.setFont(bodyFont)
     love.graphics.printf(c.label, x+12, y+cardH/2-10, cardW-24, 'center')
     if i==active.selected then
       love.graphics.setColor(0.153, 0.953, 1.0, 0.25)
@@ -64,9 +97,9 @@ function Upgrades.draw(vw, vh)
     end
   end
 
-  love.graphics.setFont(love.graphics.newFont(16))
-  love.graphics.setColor(1,1,1,0.8)
-  love.graphics.printf('Left/Right (or Tab) to choose, Enter to confirm', 0, vh*0.75, vw, 'center')
+  love.graphics.setFont(helpFont)
+  love.graphics.setColor(1,1,1,0.85)
+  love.graphics.printf('Left/Right (or Tab) to choose, Enter to confirm', 0, helpY, vw, 'center')
 end
 
 return Upgrades
