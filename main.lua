@@ -29,6 +29,7 @@ function love.load()
   starfield.init(vw, vh)
   love.window.setTitle("Neon Invaders")
   state.set("title")
+  title.enter()
   audio.load()
   audio.setMusic(audio.music)
 end
@@ -50,6 +51,7 @@ function love.keypressed(key)
         state.set("play")
       elseif sel == "Settings" then
         state.set("settings")
+        settingsUI.enter()
       elseif sel == "Quit" then
         love.event.quit()
       end
@@ -69,13 +71,15 @@ function love.keypressed(key)
   elseif state.get() == "pause" then
     if key == "escape" then state.set("play") end
     if key == "r" then local vw, vh = scaling.getVirtualSize(); game.init(vw, vh); state.set("play") end
-    if key == "q" then state.set("title") end
+    if key == "q" then state.set("title"); title.enter() end
   elseif state.get() == "gameover" then
-    if key == "return" or key == "enter" then local vw, vh = scaling.getVirtualSize(); game.init(vw, vh); state.set("play") end
-    if key == "q" then state.set("title") end
+    local action = gameoverUI.keypressed(key)
+    if action == 'retry' then local vw, vh = scaling.getVirtualSize(); game.init(vw, vh); state.set("play") end
+    if action == 'menu' then state.set("title"); title.enter() end
+    if action == 'quit' then love.event.quit() end
   elseif state.get() == "settings" then
     settingsUI.keypressed(key)
-    if key == "return" or key == "enter" then settings.save(); state.set("title") end
+    if key == "return" or key == "enter" then settings.save(); state.set("title"); title.enter() end
   end
 end
 
@@ -88,20 +92,14 @@ function love.update(dt)
   local cur = state.get()
   if cur == "title" then
     title.update(dt)
-    -- Start on any touch as well
-    if #love.touch.getTouches() > 0 then
-      local vw, vh = scaling.getVirtualSize()
-      game.init(vw, vh)
-      state.set("play")
-    end
   elseif cur == "settings" then
     settingsUI.update(dt)
   elseif cur == "play" then
     game.update(dt, input.get())
-    if game.isOver() then state.set("gameover") end
-  elseif cur == "pause" then
+    if game.isOver() then gameoverUI.enter(); state.set("gameover") end
+  elseif state.get() == "pause" then
     -- paused, no game update
-  elseif cur == "gameover" then
+  elseif state.get() == "gameover" then
     -- awaiting input
   end
 end
@@ -175,6 +173,36 @@ function love.mousepressed(x, y, button)
       end
     end
     return
+  elseif state.get() == "title" then
+    local vx, vy = scaling.toVirtual(x, y)
+    local vw, vh = scaling.getVirtualSize()
+    local sel = title.pointerPressed(vw, vh, vx, vy)
+    if sel == "Start" then
+      local gw, gh = scaling.getVirtualSize(); game.init(gw, gh); state.set("play")
+    elseif sel == "Settings" then
+      state.set("settings"); settingsUI.enter()
+    elseif sel == "Quit" then
+      love.event.quit()
+    end
+    if sel then return end
+  elseif state.get() == "gameover" then
+    local vx, vy = scaling.toVirtual(x, y)
+    local leftPanel, centerPanel = scaling.getPanelsVirtual()
+    local lx = vx - centerPanel.x
+    local ly = vy - centerPanel.y
+    if lx >= 0 and lx <= centerPanel.w and ly >= 0 and ly <= centerPanel.h then
+      local action = gameoverUI.pointerPressed(centerPanel.w, centerPanel.h, lx, ly)
+      if action == 'retry' then local vw, vh = scaling.getVirtualSize(); game.init(vw, vh); state.set("play") end
+      if action == 'menu' then state.set("title"); title.enter() end
+      if action == 'quit' then love.event.quit() end
+    end
+    return
+  elseif state.get() == "settings" then
+    local vx, vy = scaling.toVirtual(x, y)
+    local vw, vh = scaling.getVirtualSize()
+    local action = settingsUI.pointerPressed(vw, vh, vx, vy)
+    if action == 'back' then settings.save(); state.set("title"); title.enter() end
+    if action then return end
   end
 end
 
@@ -191,5 +219,35 @@ function love.touchpressed(id, x, y, dx, dy, pressure)
       end
     end
     return
+  elseif state.get() == "title" then
+    local vx, vy = scaling.toVirtual(x, y)
+    local vw, vh = scaling.getVirtualSize()
+    local sel = title.pointerPressed(vw, vh, vx, vy)
+    if sel == "Start" then
+      local gw, gh = scaling.getVirtualSize(); game.init(gw, gh); state.set("play")
+    elseif sel == "Settings" then
+      state.set("settings"); settingsUI.enter()
+    elseif sel == "Quit" then
+      love.event.quit()
+    end
+    if sel then return end
+  elseif state.get() == "gameover" then
+    local vx, vy = scaling.toVirtual(x, y)
+    local leftPanel, centerPanel = scaling.getPanelsVirtual()
+    local lx = vx - centerPanel.x
+    local ly = vy - centerPanel.y
+    if lx >= 0 and lx <= centerPanel.w and ly >= 0 and ly <= centerPanel.h then
+      local action = gameoverUI.pointerPressed(centerPanel.w, centerPanel.h, lx, ly)
+      if action == 'retry' then local vw, vh = scaling.getVirtualSize(); game.init(vw, vh); state.set("play") end
+      if action == 'menu' then state.set("title"); title.enter() end
+      if action == 'quit' then love.event.quit() end
+    end
+    return
+  elseif state.get() == "settings" then
+    local vx, vy = scaling.toVirtual(x, y)
+    local vw, vh = scaling.getVirtualSize()
+    local action = settingsUI.pointerPressed(vw, vh, vx, vy)
+    if action == 'back' then settings.save(); state.set("title"); title.enter() end
+    if action then return end
   end
 end
