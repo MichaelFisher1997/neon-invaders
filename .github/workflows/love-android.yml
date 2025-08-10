@@ -23,7 +23,7 @@ jobs:
           resource-path: "android/icons"
           # icon-specifier: "@mipmap/ic_launcher"
           love-ref: "11.5"
-          love-package: "android/love-android/app/src/main/assets/assets/game.love"
+          love-package: "android/love-android/app/src/main/assets/game.love"
           product-name: "neon-invaders"
           version-string: "12.0"
           version-code: 33
