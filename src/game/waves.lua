@@ -7,7 +7,9 @@ local function difficultyMultipliers()
   if d == 'easy' then
     return { speed = 0.9, fire = 0.8, stepDownAdd = 0, playerLivesBonus = 1 }
   elseif d == 'hard' then
-    return { speed = 1.15, fire = 1.25, stepDownAdd = 4, playerLivesBonus = 0 }
+    -- Tuning: Hard was spiking too early with faster step-down cycles and row growth.
+    -- Soften multipliers to preserve challenge without early brick walls.
+    return { speed = 1.10, fire = 1.15, stepDownAdd = 0, playerLivesBonus = 0 }
   else
     return { speed = 1.0, fire = 1.0, stepDownAdd = 0, playerLivesBonus = 0 }
   end

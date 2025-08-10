@@ -21,14 +21,18 @@ local function getTouchZones()
   local scale, ox, oy = scaling.getScale()
   local vw, vh = scaling.getVirtualSize()
   local leftPanel, centerPanel, rightPanel = scaling.getPanelsVirtual()
-  local gap = vw * 0.02
-  local btnW = leftPanel.w * 0.42
-  local btnH = leftPanel.h * 0.28
-  local padY = vh - btnH - gap
-  local leftBtn = { x = leftPanel.x + gap, y = padY, w = btnW, h = btnH }
-  local rightBtn = { x = leftPanel.x + gap + btnW + gap, y = padY, w = btnW, h = btnH }
-  local fireR = rightPanel.w * 0.34
-  local fire = { x = rightPanel.x + rightPanel.w - fireR - gap, y = vh - fireR - gap, r = fireR }
+  -- Align touch zones with HUD control visuals (left: wide pad with divider, right: large fire circle)
+  local gapL = math.floor(leftPanel.w * 0.06 + 0.5)
+  local padH = math.floor(leftPanel.h * 0.22 + 0.5)
+  local padW = leftPanel.w - gapL * 2
+  local padX = leftPanel.x + gapL
+  local padY = leftPanel.y + leftPanel.h - padH - gapL
+  local halfW = padW / 2
+  local leftBtn = { x = padX, y = padY, w = halfW, h = padH }
+  local rightBtn = { x = padX + halfW, y = padY, w = halfW, h = padH }
+  local gapR = math.floor(rightPanel.w * 0.06 + 0.5)
+  local fireR = math.max(22, math.floor(rightPanel.w * 0.18 + 0.5))
+  local fire = { x = rightPanel.x + rightPanel.w - fireR - gapR, y = rightPanel.y + rightPanel.h - fireR - gapR, r = fireR }
 
   -- Convert to screen-space for touch hit-testing
   local function toScreenRect(r)
@@ -113,6 +117,11 @@ end
 
 function Input.getZones()
   return getTouchZones()
+end
+
+function Input.getHeld()
+  -- Expose current held state for UI feedback
+  return { left = held.left, right = held.right, fire = held.fire }
 end
 
 return Input

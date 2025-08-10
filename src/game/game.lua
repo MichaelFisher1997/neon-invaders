@@ -151,17 +151,43 @@ function Game.update(dt, input)
     if bossSpawned then
       -- Wait for boss defeat to progress
       if not Boss.exists() then
-        -- Boss defeated -> next wave
-        Banner.trigger("WAVE CLEARED!")
-        wave = wave + 1
-        local nextCfg = Waves.configFor(wave)
-        Bullets.clear('enemy')
-    Aliens.respawnFromConfig(nextCfg, Player.y)
-        bossSpawned = false
-        waveGraceTimer = 1.0
+        -- Boss defeated -> show intermission BEFORE starting next wave
+        if not intermissionPending then
+          Banner.trigger("WAVE CLEARED!")
+          Upgrades.show() -- always show after boss defeat
+          intermissionPending = true
+          pendingNextCfg = Waves.configFor(wave + 1)
+          bossSpawned = false
+          return
+        else
+          -- Intermission already shown; wait for apply/confirm
+          if not Upgrades.isShowing() and pendingNextCfg then
+            wave = wave + 1
+            Bullets.clear('enemy')
+            Aliens.respawnFromConfig(pendingNextCfg, Player.y)
+            intermissionPending = false
+            pendingNextCfg = nil
+            bossSpawned = false
+            waveGraceTimer = 1.0
+          end
+        end
       end
     else
-      -- Boss not yet spawned; spawn only after aliens cleared
+      -- Boss not yet spawned
+      if intermissionPending then
+        -- Waiting for upgrade selection after boss defeat
+        if not Upgrades.isShowing() and pendingNextCfg then
+          wave = wave + 1
+          Bullets.clear('enemy')
+          Aliens.respawnFromConfig(pendingNextCfg, Player.y)
+          intermissionPending = false
+          pendingNextCfg = nil
+          bossSpawned = false
+          waveGraceTimer = 1.0
+        end
+        return
+      end
+      -- Spawn boss only after aliens cleared and no intermission pending
       if Aliens.allCleared() then
         local _, center, _ = scaling.getPanelsVirtual()
         Boss.spawnFromConfig(cfg, center.w, center.h)

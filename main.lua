@@ -140,15 +140,15 @@ function love.draw()
     end
     scaling.popViewport()
 
-    -- Side panels frame + hints
-    -- Always draw framed side panels; draw hints during play
+    -- Side panels frame + controls
+    -- Always draw framed side panels; draw controls during play
     scaling.pushViewport(leftPanel)
     hud.drawPanelFrame(leftPanel.w, leftPanel.h)
-    if cur == "play" then hud.drawTouchHints(leftPanel.w, leftPanel.h) end
+    if cur == "play" then hud.drawLeftControls(leftPanel.w, leftPanel.h) end
     scaling.popViewport()
     scaling.pushViewport(rightPanel)
     hud.drawPanelFrame(rightPanel.w, rightPanel.h)
-    if cur == "play" then hud.drawTouchHints(rightPanel.w, rightPanel.h) end
+    if cur == "play" then hud.drawRightControls(rightPanel.w, rightPanel.h) end
     scaling.popViewport()
   end
 
