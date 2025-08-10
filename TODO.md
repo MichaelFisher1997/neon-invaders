@@ -10,7 +10,7 @@ Source of truth: `SPECS.md`. Keep items small, tick as delivered, and note chang
 - [x] Starfield background (`src/fx/starfield.lua`)
   - Notes: Two-layer parallax stars; density scales with virtual area.
 - [x] Input abstraction (`src/core/input.lua`) for keyboard + touch
-  - Notes: Unified `moveAxis`, `firePressed`, `pausePressed`; touch zones & fire button (~15% width).
+  - Notes: Unified `moveAxis`, `firePressed`, `pausePressed`; touch zones & fire button (~68% width per spec).
 
 ## Milestone B: Core Gameplay
 - [x] Player system (move, shoot, cooldown, lives)
@@ -34,19 +34,20 @@ Source of truth: `SPECS.md`. Keep items small, tick as delivered, and note chang
 - [x] Game Over (score, retry/quit)
 - [x] Settings (music/sfx volume, difficulty) – basic shell
   - [x] Difficulty is a proper left/right selector
-- [ ] Touch controls (left/right zones + fire button ~15% width)
+- [x] Touch controls (left/right zones + fire button ~68% width per spec)
   - [x] Subtle on-screen touch hints for zones/buttons
   - [x] GameBoy-style panels and viewport; gameplay confined to center; touch hitboxes aligned to side panels
 
 ## Milestone E: Polish
-- [ ] Particle bursts on kills; brief screen shake on player hit
+- [x] Particle bursts on kills; brief screen shake on player hit
   - [x] Initial particles and screen shake
 - [ ] “Wave Cleared!” banner animation
   - [x] Basic banner on wave transition
 - [ ] Cosmetic unlocks at score thresholds (ship color)
  - [x] Local high scores (`src/systems/save.lua`)
-- [ ] Basic audio loader + volume persistence (`src/systems/settings.lua`)
+ - [x] Basic audio loader + volume persistence (`src/systems/settings.lua`)
   - [x] SFX beeps for shoot/hit/explosion/UI; simple music loop
+  - [x] Apply volume changes immediately (call `audio.update()` in `main.lua`)
 
 ## Milestone F: QA
 - [ ] Test scaling on 720×1280, 1080×2400, 1440×3120

@@ -31,7 +31,8 @@ local function getTouchZones()
   local leftBtn = { x = padX, y = padY, w = halfW, h = padH }
   local rightBtn = { x = padX + halfW, y = padY, w = halfW, h = padH }
   local gapR = math.floor(rightPanel.w * 0.06 + 0.5)
-  local fireR = math.max(22, math.floor(rightPanel.w * 0.18 + 0.5))
+  -- Match HUD: diameter ≈ 68% of panel width => radius ≈ 34%
+  local fireR = math.max(22, math.floor(rightPanel.w * 0.34 + 0.5))
   local fire = { x = rightPanel.x + rightPanel.w - fireR - gapR, y = rightPanel.y + rightPanel.h - fireR - gapR, r = fireR }
 
   -- Convert to screen-space for touch hit-testing

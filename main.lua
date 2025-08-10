@@ -84,6 +84,7 @@ function love.update(dt)
   input.update(dt)
   starfield.update(dt)
   screenshake.update(dt)
+  audio.update()
   local cur = state.get()
   if cur == "title" then
     title.update(dt)

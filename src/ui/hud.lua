@@ -113,7 +113,8 @@ end
 function HUD.drawRightControls(vw, vh)
   -- Hold-to-fire circle on the right panel
   local gap = math.floor(vw * 0.06 + 0.5)
-  local fireR = math.max(22, math.floor(vw * 0.18 + 0.5))
+  -- Spec: diameter ≈ 68% of panel width => radius ≈ 34%
+  local fireR = math.max(22, math.floor(vw * 0.34 + 0.5))
   local cx = vw - fireR - gap
   local cy = vh - fireR - gap
   local held = Input.getHeld()
