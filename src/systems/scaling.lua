@@ -10,13 +10,18 @@ local lastW, lastH
 
 local function getDisplayDimensions()
   local w, h = love.graphics.getDimensions()
+  -- On native mobile (Android/iOS), use raw window size. DPI scaling is handled by the OS.
+  local os = (love.system and love.system.getOS) and love.system.getOS() or nil
+  if os == "Android" or os == "iOS" then
+    return w, h
+  end
   local dpi = 1
   if love.window and love.window.getDPIScale then
     dpi = love.window.getDPIScale()
   elseif love.graphics and love.graphics.getDPIScale then
     dpi = love.graphics.getDPIScale()
   end
-  -- Convert framebuffer pixels to CSS/display pixels
+  -- Convert framebuffer pixels to CSS/display pixels (relevant for desktop/web)
   w = math.floor(w / dpi + 0.5)
   h = math.floor(h / dpi + 0.5)
   return w, h

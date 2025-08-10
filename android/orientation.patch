@@ -1,0 +1,6 @@
+*** Begin Patch
+*** Update File: app/src/main/AndroidManifest.xml
+@@
+-            android:screenOrientation="${ORIENTATION}">
++            android:screenOrientation="sensorLandscape">
+*** End Patch
