@@ -10,7 +10,7 @@ Source of truth: `SPECS.md`. Keep items small, tick as delivered, and note chang
 - [x] Starfield background (`src/fx/starfield.lua`)
   - Notes: Two-layer parallax stars; density scales with virtual area.
 - [x] Input abstraction (`src/core/input.lua`) for keyboard + touch
-  - Notes: Unified `moveAxis`, `firePressed`, `pausePressed`; touch zones & fire button (~68% width per spec).
+  - Notes: Unified `moveAxis`, `firePressed`, `pausePressed`; touch zones now use full left/right side panels for movement; auto-fire enabled (no fire button).
 
 ## Milestone B: Core Gameplay
 - [x] Player system (move, shoot, cooldown, lives)
@@ -34,8 +34,9 @@ Source of truth: `SPECS.md`. Keep items small, tick as delivered, and note chang
 - [x] Game Over (score, retry/quit)
 - [x] Settings (music/sfx volume, difficulty) – basic shell
   - [x] Difficulty is a proper left/right selector
-- [x] Touch controls (left/right zones + fire button ~68% width per spec)
-  - [x] Subtle on-screen touch hints for zones/buttons
+- [x] Dedicated Cosmetics menu (vertical cards, lock status, thresholds, selection)
+- [x] Touch controls: full left/right side panels for movement; auto-fire (fire button removed)
+  - [x] Subtle on-screen touch hints for zones/panels
   - [x] GameBoy-style panels and viewport; gameplay confined to center; touch hitboxes aligned to side panels
 
 ## Milestone E: Polish
@@ -43,9 +44,10 @@ Source of truth: `SPECS.md`. Keep items small, tick as delivered, and note chang
   - [x] Initial particles and screen shake
 - [ ] “Wave Cleared!” banner animation
   - [x] Basic banner on wave transition
-- [ ] Cosmetic unlocks at score thresholds (ship color)
- - [x] Local high scores (`src/systems/save.lua`)
- - [x] Basic audio loader + volume persistence (`src/systems/settings.lua`)
+- [x] Cosmetic unlocks at score thresholds (ship color)
+  - Notes: 5 cosmetics with thresholds in `src/game/config.lua` (defaults: 2500, 5500, 9000, 12000, 15000). Unlocks via score, auto-selects highest unlocked; persists in `cosmetics.lua`.
+- [x] Local high scores (`src/systems/save.lua`)
+- [x] Basic audio loader + volume persistence (`src/systems/settings.lua`)
   - [x] SFX beeps for shoot/hit/explosion/UI; simple music loop
   - [x] Apply volume changes immediately (call `audio.update()` in `main.lua`)
 
@@ -66,3 +68,4 @@ Source of truth: `SPECS.md`. Keep items small, tick as delivered, and note chang
 - [E] Audio: synthesized SFX and simple looping music; wired to settings volumes.
 - [B/D] Aliens resized to fit center viewport and now descend vertically-only (no horizontal marching); formation centering and scaling fixed within center game screen.
 - [B/C/D] Restored horizontal marching with edge step-down; reserved side motion space; waves now start at 1 row and add +1 row each wave (cap 6), stacking upward to preserve a 2-row buffer above the player.
+- [D] Controls refresh: Auto-fire on; removed right fire button; entire side panels act as left/right movement on touch; HUD visuals updated accordingly.

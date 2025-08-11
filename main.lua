@@ -9,6 +9,7 @@ local pauseUI = require("src.ui.pause")
 local gameoverUI = require("src.ui.gameover")
 local screenshake = require("src.fx.screenshake")
 local settingsUI = require("src.ui.settings")
+local cosmeticsUI = require("src.ui.cosmetics")
 local settings = require("src.systems.settings")
 local upgrades = require("src.game.upgrades")
 local audio = require("src.audio.audio")
@@ -49,6 +50,9 @@ function love.keypressed(key)
         local vw, vh = scaling.getVirtualSize()
         game.init(vw, vh)
         state.set("play")
+      elseif sel == "Cosmetics" then
+        state.set("cosmetics")
+        cosmeticsUI.enter()
       elseif sel == "Settings" then
         state.set("settings")
         settingsUI.enter()
@@ -80,6 +84,9 @@ function love.keypressed(key)
   elseif state.get() == "settings" then
     settingsUI.keypressed(key)
     if key == "return" or key == "enter" then settings.save(); state.set("title"); title.enter() end
+  elseif state.get() == "cosmetics" then
+    local action = cosmeticsUI.keypressed(key)
+    if action == 'back' then state.set("title"); title.enter() end
   end
 end
 
@@ -94,6 +101,8 @@ function love.update(dt)
     title.update(dt)
   elseif cur == "settings" then
     settingsUI.update(dt)
+  elseif cur == "cosmetics" then
+    cosmeticsUI.update(dt)
   elseif cur == "play" then
     game.update(dt, input.get())
     if game.isOver() then gameoverUI.enter(); state.set("gameover") end
@@ -120,6 +129,8 @@ function love.draw()
     title.draw(vw, vh)
   elseif cur == "settings" then
     settingsUI.draw(vw, vh)
+  elseif cur == "cosmetics" then
+    cosmeticsUI.draw(vw, vh)
   else
     -- Center viewport for gameplay states
     scaling.pushViewport(centerPanel)
@@ -179,6 +190,8 @@ function love.mousepressed(x, y, button)
     local sel = title.pointerPressed(vw, vh, vx, vy)
     if sel == "Start" then
       local gw, gh = scaling.getVirtualSize(); game.init(gw, gh); state.set("play")
+    elseif sel == "Cosmetics" then
+      state.set("cosmetics"); cosmeticsUI.enter()
     elseif sel == "Settings" then
       state.set("settings"); settingsUI.enter()
     elseif sel == "Quit" then
@@ -203,6 +216,12 @@ function love.mousepressed(x, y, button)
     local action = settingsUI.pointerPressed(vw, vh, vx, vy)
     if action == 'back' then settings.save(); state.set("title"); title.enter() end
     if action then return end
+  elseif state.get() == "cosmetics" then
+    local vx, vy = scaling.toVirtual(x, y)
+    local vw, vh = scaling.getVirtualSize()
+    local action = cosmeticsUI.pointerPressed(vw, vh, vx, vy)
+    if action == 'back' then state.set("title"); title.enter() end
+    if action then return end
   end
 end
 
@@ -211,12 +230,20 @@ function love.mousemoved(x, y, dx, dy, istouch)
     local vx, vy = scaling.toVirtual(x, y)
     local vw, vh = scaling.getVirtualSize()
     settingsUI.pointerMoved(vw, vh, vx, vy)
+  elseif state.get() == "cosmetics" then
+    local vx, vy = scaling.toVirtual(x, y)
+    local vw, vh = scaling.getVirtualSize()
+    cosmeticsUI.pointerMoved(vw, vh, vx, vy)
   end
 end
 
 function love.mousereleased(x, y, button)
   if state.get() == "settings" then
     settingsUI.pointerReleased()
+  elseif state.get() == "cosmetics" then
+    local vx, vy = scaling.toVirtual(x, y)
+    local vw, vh = scaling.getVirtualSize()
+    cosmeticsUI.pointerReleased(vw, vh, vx, vy)
   end
 end
 
@@ -225,12 +252,20 @@ function love.touchmoved(id, x, y, dx, dy, pressure)
     local vx, vy = scaling.toVirtual(x, y)
     local vw, vh = scaling.getVirtualSize()
     settingsUI.pointerMoved(vw, vh, vx, vy)
+  elseif state.get() == "cosmetics" then
+    local vx, vy = scaling.toVirtual(x, y)
+    local vw, vh = scaling.getVirtualSize()
+    cosmeticsUI.pointerMoved(vw, vh, vx, vy)
   end
 end
 
 function love.touchreleased(id, x, y, dx, dy, pressure)
   if state.get() == "settings" then
     settingsUI.pointerReleased()
+  elseif state.get() == "cosmetics" then
+    local vx, vy = scaling.toVirtual(x, y)
+    local vw, vh = scaling.getVirtualSize()
+    cosmeticsUI.pointerReleased(vw, vh, vx, vy)
   end
 end
 
@@ -253,6 +288,8 @@ function love.touchpressed(id, x, y, dx, dy, pressure)
     local sel = title.pointerPressed(vw, vh, vx, vy)
     if sel == "Start" then
       local gw, gh = scaling.getVirtualSize(); game.init(gw, gh); state.set("play")
+    elseif sel == "Cosmetics" then
+      state.set("cosmetics"); cosmeticsUI.enter()
     elseif sel == "Settings" then
       state.set("settings"); settingsUI.enter()
     elseif sel == "Quit" then
@@ -276,6 +313,12 @@ function love.touchpressed(id, x, y, dx, dy, pressure)
     local vw, vh = scaling.getVirtualSize()
     local action = settingsUI.pointerPressed(vw, vh, vx, vy)
     if action == 'back' then settings.save(); state.set("title"); title.enter() end
+    if action then return end
+  elseif state.get() == "cosmetics" then
+    local vx, vy = scaling.toVirtual(x, y)
+    local vw, vh = scaling.getVirtualSize()
+    local action = cosmeticsUI.pointerPressed(vw, vh, vx, vy)
+    if action == 'back' then state.set("title"); title.enter() end
     if action then return end
   end
 end

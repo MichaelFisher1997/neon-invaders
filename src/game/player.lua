@@ -1,5 +1,6 @@
 local Player = {}
 local audio = require("src.audio.audio")
+local Cosmetics = require("src.systems.cosmetics")
 
 local VIRTUAL_WIDTH, VIRTUAL_HEIGHT = 1280, 720
 
@@ -22,7 +23,8 @@ function Player.init(virtualW, virtualH)
   Player.width = DEFAULTS.width
   Player.height = DEFAULTS.height
   Player.lives = 3
-  Player.color = {0.153, 0.953, 1.0, 1.0} -- cyan
+  -- initial color comes from cosmetics selection
+  Player.color = Cosmetics.getColor()
   Player.invincibleTimer = 0
   Player.deadTimer = 0
 end
@@ -62,6 +64,8 @@ end
 
 function Player.draw()
   if Player.deadTimer > 0 then return end
+  -- refresh color from cosmetics selection in case it changed
+  Player.color = Cosmetics.getColor()
   local color = Player.color
   local a = color[4] or 1
   if Player.invincibleTimer > 0 then

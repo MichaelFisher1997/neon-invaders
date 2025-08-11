@@ -182,7 +182,7 @@ function UISettings.pointerPressed(vw, vh, lx, ly)
     draggingIndex = idx
     return nil
   elseif entry.type == 'select' then
-    -- Left arrow, right arrow, or center cycles
+    -- Left arrow, right arrow, or center cycles (difficulty)
     local opts = entry.options
     local cur = 1
     for i,o in ipairs(opts) do if o == s.difficulty then cur = i end end

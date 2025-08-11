@@ -7,6 +7,7 @@ local Waves = require("src.game.waves")
 local Banner = require("src.ui.banner")
 local Boss = require("src.game.boss")
 local Upgrades = require("src.game.upgrades")
+local Cosmetics = require("src.systems.cosmetics")
 local scaling = require("src.systems.scaling")
 
 local Game = {}
@@ -99,6 +100,9 @@ function Game.update(dt, input)
       end
     end
   end)
+
+  -- Check cosmetic unlocks based on current score
+  Cosmetics.checkUnlocks(score)
 
   -- Enemy fire logic (difficulty-aware)
   local cfg = Waves.configFor(wave)
