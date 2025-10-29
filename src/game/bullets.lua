@@ -5,7 +5,7 @@ local VIRTUAL_WIDTH, VIRTUAL_HEIGHT = Constants.VIRTUAL_WIDTH, Constants.VIRTUAL
 local pool = {}
 
 local function newBullet()
-  return { x = 0, y = 0, dy = 0, from = 'player', active = false, radius = Constants.BULLET.radius, damage = 1 }
+  return { x = 0, y = 0, dy = 0, dx = 0, from = 'player', active = false, radius = Constants.BULLET.radius, damage = 1, piercing = false }
 end
 
 function Bullets.init(virtualW, virtualH)
@@ -24,17 +24,21 @@ local function getFree()
   return b
 end
 
-function Bullets.spawn(x, y, dy, from, damage)
+function Bullets.spawn(x, y, dy, from, damage, dx)
+  local Powerups = require("src.game.powerups")
   local b = getFree()
-  b.x, b.y, b.dy, b.from, b.active, b.damage = x, y, dy, from or 'player', true, damage or 1
+  b.x, b.y, b.dy, b.dx, b.from, b.active, b.damage = x, y, dy, dx or 0, from or 'player', true, damage or 1
+  b.piercing = (from == 'player') and Powerups.hasPiercing()
 end
 
 function Bullets.update(dt)
   for i = 1, #pool do
     local b = pool[i]
     if b.active then
+      b.x = b.x + (b.dx or 0) * dt
       b.y = b.y + b.dy * dt
-      if b.y < -Constants.BULLET.offscreenMargin or b.y > VIRTUAL_HEIGHT + Constants.BULLET.offscreenMargin then
+      if b.y < -Constants.BULLET.offscreenMargin or b.y > VIRTUAL_HEIGHT + Constants.BULLET.offscreenMargin or
+         b.x < -Constants.BULLET.offscreenMargin or b.x > VIRTUAL_WIDTH + Constants.BULLET.offscreenMargin then
         b.active = false
       end
     end

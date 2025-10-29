@@ -56,10 +56,17 @@ function HUD.draw(score, lives, wave, vw, vh)
     local x = centerX + (i - (lives+1)/2) * spacing
     love.graphics.polygon("fill", x, y, x-10, y+16, x+10, y+16)
   end
+  
+  -- Draw active powerups
+  HUD.drawPowerups(vw, vh)
+  
+  -- Draw active events
+  HUD.drawEvents(vw, vh)
 end
 
 function HUD.drawLeftControls(vw, vh)
   local held = Input.getHeld()
+  local swipeDir = Input.getSwipeDirection()
   -- Entire panel: MOVE LEFT
   -- Base overlay
   setColorA(COLORS.white, held.left and 0.20 or 0.08)
@@ -68,6 +75,25 @@ function HUD.drawLeftControls(vw, vh)
   local ax, ay, aw, ah = vw*0.10, vh*0.25, vw*0.80, vh*0.50
   setColorA(COLORS.white, held.left and 0.95 or 0.70)
   love.graphics.polygon('fill', ax + aw*0.66, ay + ah*0.30, ax + aw*0.36, ay + ah*0.50, ax + aw*0.66, ay + ah*0.70)
+  
+  -- Swipe indicator
+  if swipeDir then
+    setColorA(COLORS.cyan, 0.6)
+    local swipeY = vh * 0.75
+    local swipeCX = vw / 2
+    if swipeDir == "left" then
+      -- Left arrow
+      love.graphics.polygon('fill', swipeCX + 20, swipeY, swipeCX - 10, swipeY - 10, swipeCX - 10, swipeY + 10)
+    else
+      -- Right arrow
+      love.graphics.polygon('fill', swipeCX - 20, swipeY, swipeCX + 10, swipeY - 10, swipeCX + 10, swipeY + 10)
+    end
+    love.graphics.setFont(love.graphics.newFont(14))
+    local swipeText = swipeDir == "left" and "SWIPE LEFT" or "SWIPE RIGHT"
+    local tw = love.graphics.getFont():getWidth(swipeText)
+    love.graphics.print(swipeText, (vw - tw)/2, swipeY + 20)
+  end
+  
   -- Label
   setColorA(COLORS.cyan, 0.85)
   love.graphics.setFont(love.graphics.newFont(16))
@@ -78,6 +104,7 @@ end
 
 function HUD.drawRightControls(vw, vh)
   local held = Input.getHeld()
+  local swipeDir = Input.getSwipeDirection()
   -- Entire panel: MOVE RIGHT
   setColorA(COLORS.white, held.right and 0.20 or 0.08)
   love.graphics.rectangle('fill', 0, 0, vw, vh)
@@ -85,12 +112,107 @@ function HUD.drawRightControls(vw, vh)
   local ax, ay, aw, ah = vw*0.10, vh*0.25, vw*0.80, vh*0.50
   setColorA(COLORS.white, held.right and 0.95 or 0.70)
   love.graphics.polygon('fill', ax + aw*0.34, ay + ah*0.30, ax + aw*0.64, ay + ah*0.50, ax + aw*0.34, ay + ah*0.70)
+  
+  -- Swipe indicator
+  if swipeDir then
+    setColorA(COLORS.magenta, 0.6)
+    local swipeY = vh * 0.75
+    local swipeCX = vw / 2
+    if swipeDir == "left" then
+      -- Left arrow
+      love.graphics.polygon('fill', swipeCX + 20, swipeY, swipeCX - 10, swipeY - 10, swipeCX - 10, swipeY + 10)
+    else
+      -- Right arrow
+      love.graphics.polygon('fill', swipeCX - 20, swipeY, swipeCX + 10, swipeY - 10, swipeCX + 10, swipeY + 10)
+    end
+    love.graphics.setFont(love.graphics.newFont(14))
+    local swipeText = swipeDir == "left" and "SWIPE LEFT" or "SWIPE RIGHT"
+    local tw = love.graphics.getFont():getWidth(swipeText)
+    love.graphics.print(swipeText, (vw - tw)/2, swipeY + 20)
+  end
+  
   -- Label
   setColorA(COLORS.magenta, 0.85)
   love.graphics.setFont(love.graphics.newFont(16))
   local label = 'MOVE RIGHT'
   local tw = love.graphics.getFont():getWidth(label)
   love.graphics.print(label, (vw - tw)/2, vh*0.06)
+end
+
+function HUD.drawPowerups(vw, vh)
+  local Powerups = require("src.game.powerups")
+  local activeEffects = Powerups.getActiveEffects()
+  
+  if #activeEffects == 0 then return end
+  
+  local startX = vw * 0.02
+  local startY = vh * 0.08
+  local barWidth = 120
+  local barHeight = 8
+  local spacing = 16
+  
+  love.graphics.setFont(love.graphics.newFont(12))
+  
+  for i, effect in ipairs(activeEffects) do
+    local y = startY + (i - 1) * (barHeight + spacing + 12)
+    
+    -- Powerup name
+    love.graphics.setColor(effect.color[1], effect.color[2], effect.color[3], 0.9)
+    love.graphics.print(effect.name, startX, y)
+    
+    -- Duration bar background
+    love.graphics.setColor(0.2, 0.2, 0.2, 0.8)
+    love.graphics.rectangle('fill', startX, y + 12, barWidth, barHeight)
+    
+    -- Duration bar fill
+    local fillWidth = barWidth * (effect.duration / effect.maxDuration)
+    love.graphics.setColor(effect.color[1], effect.color[2], effect.color[3], 0.8)
+    love.graphics.rectangle('fill', startX, y + 12, fillWidth, barHeight)
+    
+    -- Duration bar border
+    love.graphics.setColor(effect.color[1], effect.color[2], effect.color[3], 1.0)
+    love.graphics.setLineWidth(1)
+    love.graphics.rectangle('line', startX, y + 12, barWidth, barHeight)
+    love.graphics.setLineWidth(1)
+  end
+end
+
+function HUD.drawEvents(vw, vh)
+  local Events = require("src.game.events")
+  local activeEvents = Events.getActiveEvents()
+  
+  if #activeEvents == 0 then return end
+  
+  local startX = vw - 140
+  local startY = vh * 0.08
+  local barWidth = 120
+  local barHeight = 8
+  local spacing = 16
+  
+  love.graphics.setFont(love.graphics.newFont(12))
+  
+  for i, event in ipairs(activeEvents) do
+    local y = startY + (i - 1) * (barHeight + spacing + 12)
+    
+    -- Event name
+    love.graphics.setColor(event.color[1], event.color[2], event.color[3], 0.9)
+    love.graphics.print(event.name, startX, y)
+    
+    -- Duration bar background
+    love.graphics.setColor(0.2, 0.2, 0.2, 0.8)
+    love.graphics.rectangle('fill', startX, y + 12, barWidth, barHeight)
+    
+    -- Duration bar fill
+    local fillWidth = barWidth * (event.timeRemaining / event.duration)
+    love.graphics.setColor(event.color[1], event.color[2], event.color[3], 0.8)
+    love.graphics.rectangle('fill', startX, y + 12, fillWidth, barHeight)
+    
+    -- Duration bar border
+    love.graphics.setColor(event.color[1], event.color[2], event.color[3], 1.0)
+    love.graphics.setLineWidth(1)
+    love.graphics.rectangle('line', startX, y + 12, barWidth, barHeight)
+    love.graphics.setLineWidth(1)
+  end
 end
 
 function HUD.drawPanelFrame(vw, vh)

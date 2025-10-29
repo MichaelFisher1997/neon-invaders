@@ -8,6 +8,8 @@ local Banner = require("src.ui.banner")
 local Boss = require("src.game.boss")
 local Upgrades = require("src.game.upgrades")
 local Cosmetics = require("src.systems.cosmetics")
+local Powerups = require("src.game.powerups")
+local Events = require("src.game.events")
 local scaling = require("src.systems.scaling")
 
 local Game = {}
@@ -32,6 +34,8 @@ function Game.init(vw, vh)
   Player.init(center.w, center.h)
   Bullets.init(center.w, center.h)
   Aliens.init(center.w, center.h)
+  Powerups.init(center.w, center.h)
+  Events.init(center.w, center.h)
   Particles.init()
   enemyFireCooldown = 0
   -- Apply difficulty-based player bonus lives for Easy
@@ -60,6 +64,8 @@ function Game.update(dt, input)
   end)
 
   Bullets.update(dt)
+  Powerups.update(dt)
+  Events.update(dt, wave)
   Particles.update(dt)
   Banner.update(dt)
   if Boss.exists() then Boss.update(dt) end
@@ -91,12 +97,20 @@ function Game.update(dt, input)
       end
       if got then
         score = score + got
-        b.active = false
+        -- Only deactivate bullet if not piercing
+        if not b.piercing then
+          b.active = false
+        end
         Particles.burst(b.x, b.y, {1.0, 0.182, 0.651, 1.0}, 10, 220) -- magenta burst
         Screenshake.add(0.08, 4)
         require('src.audio.audio').play('hit')
+        -- Try to spawn powerup from alien death
+        Powerups.trySpawnFromAlien(b.x, b.y)
       elseif hitBoss then
-        b.active = false
+        -- Only deactivate bullet if not piercing
+        if not b.piercing then
+          b.active = false
+        end
       end
     end
   end)
@@ -111,15 +125,24 @@ function Game.update(dt, input)
   while enemyFireCooldown <= 0 do
     local shooter = Aliens.getRandomAliveWorld()
     if not shooter then break end
+    
+    -- Check if shooter is sniper variant for increased fire rate
+    local alienInfo = Aliens.getAlienAtWorld(shooter.x, shooter.y)
+    local fireRateBonus = 0
+    if alienInfo and alienInfo.variant == "sniper" then
+      local variant = require("src.config.constants").ALIEN_VARIANTS.sniper
+      fireRateBonus = variant.fireRateBonus or 0
+    end
+    
     Bullets.spawn(shooter.x, shooter.y + 8, 320, 'enemy', 1)
-    enemyFireCooldown = enemyFireCooldown + (1 / enemyFireRate)
+    enemyFireCooldown = enemyFireCooldown + (1 / (enemyFireRate + fireRateBonus))
   end
 
   -- Collisions: enemy bullets vs player
   local px, py, pw, ph = Player.getAABB()
   Bullets.eachActive(function(b)
     if b.from == 'enemy' then
-      if Player.isVulnerable() then
+      if Player.isVulnerable() and not Powerups.isInvincible() then
         local dx = math.max(px - b.x, 0, b.x - (px + pw))
         local dy = math.max(py - b.y, 0, b.y - (py + ph))
         if dx*dx + dy*dy <= (b.radius*b.radius) then
@@ -137,6 +160,30 @@ function Game.update(dt, input)
       end
     end
   end)
+
+  -- Check event collisions with player
+  local playerCenterX = px + pw/2
+  local playerCenterY = py + ph/2
+  local playerRadius = math.max(pw, ph) / 2
+  if Events.checkPlayerCollisions(playerCenterX, playerCenterY, playerRadius) then
+    Player.lives = math.max(0, (Player.lives or 3) - 1)
+    Particles.burst(playerCenterX, playerCenterY, {1.0, 0.4, 0.2, 1.0}, 20, 300) -- Orange
+    Screenshake.add(0.25, 15)
+    Player.startRespawn()
+    if Player.lives <= 0 then
+      isGameOver = true
+    end
+    require('src.audio.audio').play('hit')
+  end
+
+  -- Collisions: player vs powerups
+  local playerCenterX = px + pw/2
+  local playerCenterY = py + ph/2
+  local playerRadius = math.max(pw, ph) / 2
+  local collectedPowerup = Powerups.checkPlayerCollision(playerCenterX, playerCenterY, playerRadius)
+  if collectedPowerup then
+    -- Powerup collected effects handled in powerups module
+  end
 
   -- Check lose (aliens reach bottom) with grace at wave start
   if waveGraceTimer > 0 then
@@ -233,6 +280,8 @@ end
 function Game.draw()
   Aliens.draw()
   Bullets.draw()
+  Powerups.draw()
+  Events.draw()
   if Boss.exists() then Boss.draw() end
   Player.draw()
   Particles.draw()

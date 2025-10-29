@@ -15,6 +15,9 @@ local services = {
   settings = require("src.systems.settings"),
   upgrades = require("src.game.upgrades"),
   audio = require("src.audio.audio"),
+  tutorial = require("src.ui.tutorial"),
+  powerups = require("src.game.powerups"),
+  events = require("src.game.events"),
   Constants = require("src.config.constants"),
 }
 
@@ -40,6 +43,11 @@ function love.load()
   services.title.enter()
   services.audio.load()
   services.audio.setMusic(services.audio.music)
+  
+  -- Check if tutorial should be shown
+  if not services.tutorial.isCompleted() then
+    services.tutorial.start()
+  end
 end
 
 function love.resize(w, h)
@@ -48,6 +56,7 @@ end
 
 function love.keypressed(key)
   services.input.keypressed(key)
+  services.tutorial.keypressed(key)
   if key == "f1" then SHOW_DEBUG_TOUCH = not SHOW_DEBUG_TOUCH end
   if key == "f2" then SHOW_DEBUG_OVERLAY = not SHOW_DEBUG_OVERLAY end
   if services.state.get() == "title" then
@@ -104,6 +113,7 @@ function love.update(dt)
   services.starfield.update(dt)
   services.screenshake.update(dt)
   services.audio.update()
+  services.tutorial.update(dt)
   local cur = services.state.get()
   if cur == "title" then
     services.title.update(dt)
@@ -177,6 +187,9 @@ function love.draw()
     services.input.drawDebug()
   end
   
+  -- Draw tutorial overlay if active
+  services.tutorial.draw(vw, vh)
+
   -- Debug overlay with FPS and entity counts
   if SHOW_DEBUG_OVERLAY then
     drawDebugOverlay()

@@ -46,19 +46,82 @@ function Player.update(dt, input, spawnBullet)
     end
   end
 
-  -- Move
+  -- Move with powerup speed boost
+  local Powerups = require("src.game.powerups")
   local move = input.moveAxis or 0
-  Player.x = Player.x + move * Player.speed * dt
+  local speedMultiplier = Powerups.getEffectMultiplier("speed")
+  Player.x = Player.x + move * Player.speed * speedMultiplier * dt
   local minX = DEFAULTS.margin + Player.width / 2
   local maxX = VIRTUAL_WIDTH - DEFAULTS.margin - Player.width / 2
   if Player.x < minX then Player.x = minX end
   if Player.x > maxX then Player.x = maxX end
 
-  -- Fire (allow holding fire)
+  -- Fire (allow holding fire) with powerup effects
+  local Powerups = require("src.game.powerups")
+  local fireRateMultiplier = Powerups.getEffectMultiplier("fireRate")
+  local multiShot = Powerups.getMultiShot()
+  local piercing = Powerups.hasPiercing()
+  
   Player.cooldown = math.max(0, Player.cooldown - dt)
-  if (input.fireHeld or input.firePressed) and Player.cooldown <= 0 then
-    spawnBullet(Player.x, Player.y - Player.height / 2 - 4, -Constants.PLAYER.bulletSpeed, 'player', 1)
-    Player.cooldown = 1 / Player.fireRate
+  local shouldFire = (input.fireHeld or input.firePressed) and Player.cooldown <= 0
+  
+  -- Handle swipe shooting
+  local Input = require("src.core.input")
+  local swipeDir = Input.getSwipeDirection()
+  
+  if (swipeDir or shouldFire) and Player.cooldown <= 0 then
+    local bulletSpeed = Constants.PLAYER.bulletSpeed
+    local baseX = Player.x
+    local baseY = Player.y - Player.height / 2 - 4
+    
+    if swipeDir then
+      -- Swipe shooting - single diagonal shot
+      local dx = 0
+      local dy = -bulletSpeed -- Default upward
+      
+      if swipeDir == "left" then
+        dx = -bulletSpeed * 0.5 -- Diagonal left
+        dy = -bulletSpeed * 0.8
+      elseif swipeDir == "right" then
+        dx = bulletSpeed * 0.5 -- Diagonal right
+        dy = -bulletSpeed * 0.8
+      end
+      
+      -- Normalize diagonal shots
+      if dx ~= 0 then
+        local mag = math.sqrt(dx*dx + dy*dy)
+        dx = (dx / mag) * bulletSpeed
+        dy = (dy / mag) * bulletSpeed
+      end
+      
+      spawnBullet(baseX, baseY, dy, 'player', 1, dx)
+    else
+      -- Normal shooting - potentially multi-shot
+      if multiShot > 1 then
+        -- Multi-shot spread
+        local spread = 15 -- degrees
+        for i = 1, multiShot do
+          local angle = 0
+          if multiShot == 3 then
+            angle = (i - 2) * spread -- -15, 0, 15 degrees
+          elseif multiShot == 2 then
+            angle = (i == 1) and -spread/2 or spread/2
+          end
+          
+          local rad = math.rad(angle)
+          local dx = math.sin(rad) * bulletSpeed
+          local dy = -math.cos(rad) * bulletSpeed
+          local offsetX = (i - (multiShot + 1) / 2) * 12
+          
+          spawnBullet(baseX + offsetX, baseY, dy, 'player', 1, dx)
+        end
+      else
+        -- Single shot
+        spawnBullet(baseX, baseY, -bulletSpeed, 'player', 1)
+      end
+    end
+    
+    Player.cooldown = 1 / (Player.fireRate * fireRateMultiplier)
     if audio and audio.play then audio.play('player_shoot') end
   end
 end

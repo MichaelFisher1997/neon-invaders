@@ -7,6 +7,9 @@ local state = {
   fireHeld = false,
   firePressed = false,
   pausePressed = false,
+  autoFire = true,
+  swipeStart = nil,
+  swipeDirection = nil,
 }
 
 local prev = {
@@ -15,6 +18,7 @@ local prev = {
 }
 
 local held = { left = false, right = false, fire = false }
+local touchHistory = {}
 
 -- Helper functions
 local function clamp(x, a, b) return math.max(a, math.min(b, x)) end
@@ -36,10 +40,32 @@ local function getTouchZones()
 end
 
 -- Unified pointer input handler for mouse and touch
-local function handlePointerInput(x, y, isPressed)
+local function handlePointerInput(x, y, isPressed, touchId)
   if not isPressed then
     held.left, held.right = false, false
+    -- Clear swipe data on release
+    if touchId and touchHistory[touchId] then
+      touchHistory[touchId] = nil
+    end
     return
+  end
+  
+  -- Track touch for swipe detection
+  if touchId then
+    if not touchHistory[touchId] then
+      touchHistory[touchId] = {x = x, y = y, time = love.timer.getTime()}
+    else
+      local touch = touchHistory[touchId]
+      local dx = x - touch.x
+      local dy = y - touch.y
+      local dt = love.timer.getTime() - touch.time
+      
+      -- Detect swipe: minimum distance and time threshold
+      if math.abs(dx) > 30 and dt < 0.3 then
+        state.swipeDirection = dx > 0 and "right" or "left"
+        state.swipeStart = {x = touch.x, y = touch.y}
+      end
+    end
   end
   
   local zones = getTouchZones()
@@ -79,28 +105,33 @@ function Input.update(dt)
   -- Handle touch input
   for _, id in ipairs(love.touch.getTouches()) do
     local sx, sy = love.touch.getPosition(id)
-    handlePointerInput(sx, sy, true)
+    handlePointerInput(sx, sy, true, id)
   end
 
   -- Handle mouse input (desktop testing)
   if love.mouse.isDown(1) then
     local mx, my = love.mouse.getPosition()
-    handlePointerInput(mx, my, true)
+    handlePointerInput(mx, my, true, "mouse")
   end
 
   -- Update movement
   updateMovementAxis(keyboardMove)
 
-  -- Auto-fire always on
-  state.fireHeld = true
+  -- Auto-fire based on setting
+  state.fireHeld = state.autoFire
   state.firePressed = (not prev.fireHeld) and state.fireHeld
   state.pausePressed = false
+  
+  -- Clear swipe direction after processing
+  state.swipeDirection = nil
 end
 
 -- Handle key press events
 function Input.keypressed(key)
   if key == "escape" then
     state.pausePressed = true
+  elseif key == "f" then
+    state.autoFire = not state.autoFire
   end
   -- fire edge is handled in update using previous state
 end
@@ -125,6 +156,31 @@ end
 function Input.getHeld()
   -- Expose current held state for UI feedback
   return { left = held.left, right = held.right, fire = held.fire }
+end
+
+--- Get swipe direction for mobile shooting
+--- @return string|nil Swipe direction ("left" or "right") or nil
+function Input.getSwipeDirection()
+  return state.swipeDirection
+end
+
+--- Get swipe start position
+--- @return table|nil Swipe start position {x, y} or nil
+function Input.getSwipeStart()
+  return state.swipeStart
+end
+
+--- Toggle auto-fire setting
+--- @return boolean New auto-fire state
+function Input.toggleAutoFire()
+  state.autoFire = not state.autoFire
+  return state.autoFire
+end
+
+--- Get auto-fire setting
+--- @return boolean Current auto-fire state
+function Input.getAutoFire()
+  return state.autoFire
 end
 
 -- Unified UI input handler for pointer events (mouse/touch)

@@ -1,6 +1,7 @@
 local Aliens = {}
 
 local VIRTUAL_WIDTH, VIRTUAL_HEIGHT = 1280, 720
+local Constants = require("src.config.constants")
 
 local formation = {
   originX = 160,
@@ -17,13 +18,55 @@ local formation = {
 
 local ALIEN_W, ALIEN_H = 36, 22
 
+-- Enemy behavior patterns
+local behaviors = {
+  march = function(alien, dt)
+    -- Standard marching behavior - handled by formation movement
+  end,
+  
+  zigzag = function(alien, dt)
+    -- Zigzag movement for individual aliens
+    alien.zigzagPhase = (alien.zigzagPhase or 0) + dt * 3
+    alien.xOffset = math.sin(alien.zigzagPhase) * 20
+  end,
+  
+  phase = function(alien, dt)
+    -- Phasing behavior - chance to avoid damage
+    alien.phaseTimer = (alien.phaseTimer or 0) + dt
+    alien.isPhased = (math.floor(alien.phaseTimer * 2) % 2) == 1
+  end
+}
 
 local function resetAliens()
   formation.aliens = {}
   for r = 1, formation.rows do
     formation.aliens[r] = {}
     for c = 1, formation.cols do
-      formation.aliens[r][c] = { alive = true, x = (c-1)*formation.spacingX, y = (r-1)*formation.spacingY, w = ALIEN_W, h = ALIEN_H, score = 10 }
+      local variantType = "basic"
+      -- Reduced variant spawn rates for better balance
+      if math.random() < 0.08 then variantType = "tank" -- Reduced from 0.2
+      elseif math.random() < 0.06 then variantType = "speedy" -- Reduced from 0.15
+      elseif math.random() < 0.04 then variantType = "sniper" -- Reduced from 0.1
+      elseif math.random() < 0.02 then variantType = "ghost" -- Reduced from 0.05
+      end
+      
+      local variant = Constants.ALIEN_VARIANTS[variantType]
+      local alien = {
+        alive = true,
+        x = (c-1)*formation.spacingX,
+        y = (r-1)*formation.spacingY,
+        w = ALIEN_W * variant.size,
+        h = ALIEN_H * variant.size,
+        variant = variantType,
+        health = variant.health,
+        maxHealth = variant.health,
+        score = variant.score,
+        zigzagPhase = math.random() * math.pi * 2,
+        phaseTimer = 0,
+        xOffset = 0,
+        isPhased = false
+      }
+      formation.aliens[r][c] = alien
     end
   end
 end
@@ -65,8 +108,27 @@ local function computeBounds()
 end
 
 function Aliens.update(dt)
+  -- Apply time warp effect
+  local Events = require("src.game.events")
+  local timeFactor = Events.getTimeWarpFactor()
+  local adjustedDt = dt * timeFactor
+  
+  -- Update individual alien behaviors
+  for r = 1, formation.rows do
+    for c = 1, formation.cols do
+      local alien = formation.aliens[r][c]
+      if alien.alive then
+        local variant = Constants.ALIEN_VARIANTS[alien.variant]
+        local behavior = behaviors[variant.behavior]
+        if behavior then
+          behavior(alien, adjustedDt)
+        end
+      end
+    end
+  end
+  
   -- March horizontally; step down on edges
-  formation.originX = formation.originX + formation.dir * formation.speed * dt
+  formation.originX = formation.originX + formation.dir * formation.speed * adjustedDt
   local left, right, bottom = computeBounds()
   local rightLimit = VIRTUAL_WIDTH - 24
   local leftLimit = 24
@@ -87,11 +149,55 @@ end
 function Aliens.draw()
   for r = 1, formation.rows do
     for c = 1, formation.cols do
-      local a = formation.aliens[r][c]
-      if a.alive then
-        local x, y, w, h = worldAABB(a)
-        love.graphics.setColor(1.0, 0.182, 0.651, 1.0) -- magenta
+      local alien = formation.aliens[r][c]
+      if alien.alive then
+        local variant = Constants.ALIEN_VARIANTS[alien.variant]
+        local x, y, w, h = worldAABB(alien)
+        
+        -- Apply individual offset for behaviors
+        x = x + (alien.xOffset or 0)
+        
+        -- Draw alien with variant color and effects
+        local color = variant.color
+        if alien.isPhased then
+          -- Phased aliens are semi-transparent
+          love.graphics.setColor(color[1], color[2], color[3], 0.4)
+        else
+          love.graphics.setColor(color[1], color[2], color[3], 1.0)
+        end
+        
         love.graphics.rectangle("fill", x, y, w, h, 4, 4)
+        
+        -- Draw health bar for multi-health aliens
+        if alien.health > 1 and alien.health < alien.maxHealth then
+          local barWidth = w * 0.8
+          local barHeight = 3
+          local barX = x + (w - barWidth) / 2
+          local barY = y - 8
+          
+          -- Background
+          love.graphics.setColor(0.2, 0.2, 0.2, 0.8)
+          love.graphics.rectangle("fill", barX, barY, barWidth, barHeight)
+          
+          -- Health fill
+          local healthPercent = alien.health / alien.maxHealth
+          love.graphics.setColor(1.0, 0.2, 0.2, 1.0)
+          love.graphics.rectangle("fill", barX, barY, barWidth * healthPercent, barHeight)
+        end
+        
+        -- Draw variant-specific indicators
+        love.graphics.setColor(1, 1, 1, 0.8)
+        if alien.variant == "speedy" then
+          -- Speed lines
+          love.graphics.line(x - 4, y + h/2, x + w + 4, y + h/2)
+        elseif alien.variant == "sniper" then
+          -- Target indicator
+          love.graphics.circle("line", x + w/2, y + h/2, 4)
+        elseif alien.variant == "ghost" and alien.isPhased then
+          -- Ghost effect
+          love.graphics.setColor(color[1], color[2], color[3], 0.2)
+          love.graphics.rectangle("fill", x - 2, y - 2, w + 4, h + 4, 4, 4)
+        end
       end
     end
   end
@@ -116,14 +222,36 @@ function Aliens.checkBulletCollision(bullet)
   if bullet.from ~= 'player' then return false end
   for r = 1, formation.rows do
     for c = 1, formation.cols do
-      local a = formation.aliens[r][c]
-      if a.alive then
-        local x, y, w, h = worldAABB(a)
+      local alien = formation.aliens[r][c]
+      if alien.alive then
+        local variant = Constants.ALIEN_VARIANTS[alien.variant]
+        local x, y, w, h = worldAABB(alien)
+        
+        -- Apply individual offset for behaviors
+        x = x + (alien.xOffset or 0)
+        
         local dx = math.max(x - bullet.x, 0, bullet.x - (x + w))
         local dy = math.max(y - bullet.y, 0, bullet.y - (y + h))
+        
         if dx*dx + dy*dy <= (bullet.radius * bullet.radius) then
-          a.alive = false
-          return a.score
+          -- Check for phasing
+          if alien.isPhased and variant.behavior == "phase" then
+            -- Ghost aliens have chance to phase through bullets
+            if math.random() < (variant.phaseChance or 0.3) then
+              return false -- Bullet passes through
+            end
+          end
+          
+          -- Apply damage
+          alien.health = alien.health - (bullet.damage or 1)
+          
+          if alien.health <= 0 then
+            alien.alive = false
+            return alien.score
+          else
+            -- Hit but not destroyed
+            return 0
+          end
         end
       end
     end
@@ -138,6 +266,23 @@ function Aliens.allCleared()
     end
   end
   return true
+end
+
+function Aliens.getAlienAtWorld(worldX, worldY)
+  for r = 1, formation.rows do
+    for c = 1, formation.cols do
+      local alien = formation.aliens[r][c]
+      if alien.alive then
+        local x, y, w, h = worldAABB(alien)
+        x = x + (alien.xOffset or 0)
+        
+        if worldX >= x and worldX <= x + w and worldY >= y and worldY <= y + h then
+          return alien
+        end
+      end
+    end
+  end
+  return nil
 end
 
 function Aliens.respawnFromConfig(cfg, playerY)
