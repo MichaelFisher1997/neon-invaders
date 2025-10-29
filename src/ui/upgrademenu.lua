@@ -59,7 +59,7 @@ function UpgradeMenu.keypressed(key)
   
   -- Handle back button
   if key == "escape" then
-    State.pop() -- Return to previous state (title screen)
+    State.set("title") -- Return to title screen
   end
 end
 
