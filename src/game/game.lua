@@ -8,9 +8,10 @@ local Banner = require("src.ui.banner")
 local Boss = require("src.game.boss")
 local Upgrades = require("src.game.upgrades")
 local Cosmetics = require("src.systems.cosmetics")
-local Powerups = require("src.game.powerups")
+-- No powerup module in economy system
 local Events = require("src.game.events")
 local scaling = require("src.systems.scaling")
+local Constants = require("src.config.constants")
 
 local Game = {}
 
@@ -34,7 +35,7 @@ function Game.init(vw, vh)
   Player.init(center.w, center.h)
   Bullets.init(center.w, center.h)
   Aliens.init(center.w, center.h)
-  Powerups.init(center.w, center.h)
+  -- No powerup initialization in economy system
   Events.init(center.w, center.h)
   Particles.init()
   enemyFireCooldown = 0
@@ -64,7 +65,7 @@ function Game.update(dt, input)
   end)
 
   Bullets.update(dt)
-  Powerups.update(dt)
+  -- No powerup updates in economy system
   Events.update(dt, wave)
   Particles.update(dt)
   Banner.update(dt)
@@ -104,8 +105,18 @@ function Game.update(dt, input)
         Particles.burst(b.x, b.y, {1.0, 0.182, 0.651, 1.0}, 10, 220) -- magenta burst
         Screenshake.add(0.08, 4)
         require('src.audio.audio').play('hit')
-        -- Try to spawn powerup from alien death
-        Powerups.trySpawnFromAlien(b.x, b.y)
+        -- Award credits for alien kill (got contains the score value)
+        local Economy = require("src.systems.economy")
+        local credits = 10 -- Base credits
+        
+        -- Check if this was a special alien by looking at the score value
+        -- Special aliens have higher scores: tank=25, speedy=20, sniper=30, ghost=35
+        if got > 15 then -- Basic alien score is 10
+          credits = credits + Constants.ECONOMY.specialAlienBonus
+          Economy.awardSpecialAlienKill()
+        end
+        
+        Economy.addCredits(credits)
       elseif hitBoss then
         -- Only deactivate bullet if not piercing
         if not b.piercing then
@@ -142,7 +153,7 @@ function Game.update(dt, input)
   local px, py, pw, ph = Player.getAABB()
   Bullets.eachActive(function(b)
     if b.from == 'enemy' then
-      if Player.isVulnerable() and not Powerups.isInvincible() then
+      if Player.isVulnerable() then
         local dx = math.max(px - b.x, 0, b.x - (px + pw))
         local dy = math.max(py - b.y, 0, b.y - (py + ph))
         if dx*dx + dy*dy <= (b.radius*b.radius) then
@@ -153,6 +164,9 @@ function Game.update(dt, input)
           Screenshake.add(0.18, 12)
           Player.startRespawn()
           if Player.lives <= 0 then
+            -- Convert final score to credits
+            local Economy = require("src.systems.economy")
+            Economy.convertScore(score)
             isGameOver = true
           end
           require('src.audio.audio').play('hit')
@@ -176,14 +190,7 @@ function Game.update(dt, input)
     require('src.audio.audio').play('hit')
   end
 
-  -- Collisions: player vs powerups
-  local playerCenterX = px + pw/2
-  local playerCenterY = py + ph/2
-  local playerRadius = math.max(pw, ph) / 2
-  local collectedPowerup = Powerups.checkPlayerCollision(playerCenterX, playerCenterY, playerRadius)
-  if collectedPowerup then
-    -- Powerup collected effects handled in powerups module
-  end
+  -- No powerup collision checking in economy system
 
   -- Check lose (aliens reach bottom) with grace at wave start
   if waveGraceTimer > 0 then
@@ -202,10 +209,12 @@ function Game.update(dt, input)
     if bossSpawned then
       -- Wait for boss defeat to progress
       if not Boss.exists() then
-        -- Boss defeated -> show intermission BEFORE starting next wave
+        -- Boss defeated -> award bonus and show intermission
         if not intermissionPending then
+          local Economy = require("src.systems.economy")
+          Economy.awardBossKill()
           Banner.trigger("WAVE CLEARED!")
-          Upgrades.show() -- always show after boss defeat
+          -- No temporary upgrade overlay - using persistent economy system
           intermissionPending = true
           pendingNextCfg = Waves.configFor(wave + 1)
           bossSpawned = false
@@ -226,8 +235,8 @@ function Game.update(dt, input)
     else
       -- Boss not yet spawned
       if intermissionPending then
-        -- Waiting for upgrade selection after boss defeat
-        if not Upgrades.isShowing() and pendingNextCfg then
+        -- Brief pause after boss defeat before next wave
+        if intermissionPending and pendingNextCfg then
           wave = wave + 1
           Bullets.clear('enemy')
           Aliens.respawnFromConfig(pendingNextCfg, Player.y)
@@ -280,7 +289,7 @@ end
 function Game.draw()
   Aliens.draw()
   Bullets.draw()
-  Powerups.draw()
+  -- No powerup drawing in economy system
   Events.draw()
   if Boss.exists() then Boss.draw() end
   Player.draw()

@@ -46,21 +46,21 @@ function Player.update(dt, input, spawnBullet)
     end
   end
 
-  -- Move with powerup speed boost
-  local Powerups = require("src.game.powerups")
+  -- Move with economy speed upgrade
+  local Economy = require("src.systems.economy")
   local move = input.moveAxis or 0
-  local speedMultiplier = Powerups.getEffectMultiplier("speed")
+  local speedMultiplier = Economy.getSpeedMultiplier()
   Player.x = Player.x + move * Player.speed * speedMultiplier * dt
   local minX = DEFAULTS.margin + Player.width / 2
   local maxX = VIRTUAL_WIDTH - DEFAULTS.margin - Player.width / 2
   if Player.x < minX then Player.x = minX end
   if Player.x > maxX then Player.x = maxX end
 
-  -- Fire (allow holding fire) with powerup effects
-  local Powerups = require("src.game.powerups")
-  local fireRateMultiplier = Powerups.getEffectMultiplier("fireRate")
-  local multiShot = Powerups.getMultiShot()
-  local piercing = Powerups.hasPiercing()
+  -- Fire (allow holding fire) with economy upgrades
+  local Economy = require("src.systems.economy")
+  local fireRateMultiplier = Economy.getFireRateMultiplier()
+  local multiShot = Economy.getMultiShotCount()
+  local piercing = false -- No piercing upgrade in economy system
   
   Player.cooldown = math.max(0, Player.cooldown - dt)
   local shouldFire = (input.fireHeld or input.firePressed) and Player.cooldown <= 0

@@ -57,8 +57,8 @@ function HUD.draw(score, lives, wave, vw, vh)
     love.graphics.polygon("fill", x, y, x-10, y+16, x+10, y+16)
   end
   
-  -- Draw active powerups
-  HUD.drawPowerups(vw, vh)
+  -- Draw credits
+  HUD.drawCredits(vw, vh)
   
   -- Draw active events
   HUD.drawEvents(vw, vh)
@@ -139,42 +139,23 @@ function HUD.drawRightControls(vw, vh)
   love.graphics.print(label, (vw - tw)/2, vh*0.06)
 end
 
-function HUD.drawPowerups(vw, vh)
-  local Powerups = require("src.game.powerups")
-  local activeEffects = Powerups.getActiveEffects()
-  
-  if #activeEffects == 0 then return end
+function HUD.drawCredits(vw, vh)
+  local Economy = require("src.systems.economy")
+  local credits = Economy.getCredits()
   
   local startX = vw * 0.02
   local startY = vh * 0.08
-  local barWidth = 120
-  local barHeight = 8
-  local spacing = 16
   
-  love.graphics.setFont(love.graphics.newFont(12))
+  love.graphics.setFont(love.graphics.newFont(14))
   
-  for i, effect in ipairs(activeEffects) do
-    local y = startY + (i - 1) * (barHeight + spacing + 12)
-    
-    -- Powerup name
-    love.graphics.setColor(effect.color[1], effect.color[2], effect.color[3], 0.9)
-    love.graphics.print(effect.name, startX, y)
-    
-    -- Duration bar background
-    love.graphics.setColor(0.2, 0.2, 0.2, 0.8)
-    love.graphics.rectangle('fill', startX, y + 12, barWidth, barHeight)
-    
-    -- Duration bar fill
-    local fillWidth = barWidth * (effect.duration / effect.maxDuration)
-    love.graphics.setColor(effect.color[1], effect.color[2], effect.color[3], 0.8)
-    love.graphics.rectangle('fill', startX, y + 12, fillWidth, barHeight)
-    
-    -- Duration bar border
-    love.graphics.setColor(effect.color[1], effect.color[2], effect.color[3], 1.0)
-    love.graphics.setLineWidth(1)
-    love.graphics.rectangle('line', startX, y + 12, barWidth, barHeight)
-    love.graphics.setLineWidth(1)
-  end
+  -- Credits label
+  love.graphics.setColor(1.0, 1.0, 0.5, 0.9)
+  love.graphics.print("CREDITS", startX, startY)
+  
+  -- Credits amount
+  love.graphics.setFont(love.graphics.newFont(18))
+  love.graphics.setColor(1.0, 1.0, 1.0, 1.0)
+  love.graphics.print(tostring(credits), startX, startY + 20)
 end
 
 function HUD.drawEvents(vw, vh)

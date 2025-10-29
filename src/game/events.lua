@@ -24,11 +24,11 @@ local EVENT_TYPES = {
     warningDuration = 2.0
   },
   
-  power_surge = {
-    name = "Power Surge",
-    duration = 6.0,
-    color = {0.2, 1.0, 0.8, 1.0}, -- Cyan
-    warning = "POWER SURGE DETECTED!",
+  credit_rain = {
+    name = "Credit Rain",
+    duration = 8.0,
+    color = {1.0, 1.0, 0.2, 1.0}, -- Gold
+    warning = "CREDIT RAIN!",
     warningDuration = 1.5
   },
   
@@ -179,13 +179,11 @@ local function updateEvent(event, dt)
     if math.random() < dt * 2 then -- 2 meteors per second on average
       spawnMeteor()
     end
-  elseif event.type == "power_surge" then
-    -- Power surge effect: temporary powerup spawn chance (reduced)
-    local Powerups = require("src.game.powerups")
-    if math.random() < dt * 0.15 then -- Reduced from 0.5 to 0.15 per second
-      local x = math.random(100, VIRTUAL_WIDTH - 100)
-      local y = math.random(50, 200)
-      Powerups.spawn(x, y)
+  elseif event.type == "credit_rain" then
+    -- Credit rain effect: bonus credits over time
+    local Economy = require("src.systems.economy")
+    if math.random() < dt * 0.2 then -- 20% chance per second
+      Economy.addCredits(5) -- Small credit bonus
     end
   end
   

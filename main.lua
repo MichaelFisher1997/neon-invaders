@@ -13,10 +13,10 @@ local services = {
   settingsUI = require("src.ui.settings"),
   cosmeticsUI = require("src.ui.cosmetics"),
   settings = require("src.systems.settings"),
-  upgrades = require("src.game.upgrades"),
   audio = require("src.audio.audio"),
   tutorial = require("src.ui.tutorial"),
-  powerups = require("src.game.powerups"),
+  economy = require("src.systems.economy"),
+  upgradeMenu = require("src.ui.upgrademenu"),
   events = require("src.game.events"),
   Constants = require("src.config.constants"),
 }
@@ -31,7 +31,7 @@ local uiHandlers = {
   gameover = services.gameoverUI,
   settings = services.settingsUI,
   cosmetics = services.cosmeticsUI,
-  upgrades = services.upgrades,
+  upgradeMenu = services.upgradeMenu,
 }
 
 function love.load()
@@ -43,6 +43,9 @@ function love.load()
   services.title.enter()
   services.audio.load()
   services.audio.setMusic(services.audio.music)
+  
+  -- Initialize economy system
+  services.economy.init()
   
   -- Check if tutorial should be shown
   if not services.tutorial.isCompleted() then
@@ -67,6 +70,9 @@ function love.keypressed(key)
         local vw, vh = services.scaling.getVirtualSize()
         services.game.init(vw, vh)
         services.state.set("play")
+      elseif sel == "Upgrades" then
+        services.state.set("upgradeMenu")
+        services.upgradeMenu.init()
       elseif sel == "Cosmetics" then
         services.state.set("cosmetics")
         services.cosmeticsUI.enter()
@@ -77,14 +83,7 @@ function love.keypressed(key)
         love.event.quit()
       end
     end
-  elseif services.state.get() == "play" and services.upgrades.isShowing() then
-    -- Handle upgrade overlay input BEFORE normal play handling
-    services.upgrades.keypressed(key)
-    if key == "return" or key == "enter" then
-      local Player = require('src.game.player')
-      services.upgrades.applyTo(Player)
-    end
-    return
+  -- No temporary upgrade overlay - using persistent economy system
   elseif services.state.get() == "play" then
     if key == "escape" then
       services.state.set("pause")
@@ -104,6 +103,8 @@ function love.keypressed(key)
   elseif services.state.get() == "cosmetics" then
     local action = services.cosmeticsUI.keypressed(key)
     if action == 'back' then services.state.set("title"); services.title.enter() end
+  elseif services.state.get() == "upgradeMenu" then
+    services.upgradeMenu.keypressed(key)
   end
 end
 
@@ -117,6 +118,8 @@ function love.update(dt)
   local cur = services.state.get()
   if cur == "title" then
     services.title.update(dt)
+  elseif cur == "upgradeMenu" then
+    services.upgradeMenu.update(dt)
   elseif cur == "settings" then
     services.settingsUI.update(dt)
   elseif cur == "cosmetics" then
@@ -145,6 +148,8 @@ function love.draw()
 
   if cur == "title" then
     services.title.draw(vw, vh)
+  elseif cur == "upgradeMenu" then
+    services.upgradeMenu.draw()
   elseif cur == "settings" then
     services.settingsUI.draw(vw, vh)
   elseif cur == "cosmetics" then
@@ -165,7 +170,7 @@ function love.draw()
         local scoreOnly = select(1, services.game.getHUD())
         services.gameoverUI.draw(scoreOnly, centerPanel.w, centerPanel.h)
       end
-      if services.upgrades.isShowing() then services.upgrades.draw(centerPanel.w, centerPanel.h) end
+      -- No temporary upgrade overlay - using persistent economy system
     end
     services.scaling.popViewport()
 
@@ -242,15 +247,7 @@ function love.mousepressed(x, y, button)
   local vw, vh = services.scaling.getVirtualSize()
   local curState = services.state.get()
   
-  -- Handle upgrade overlay special case
-  if curState == "play" and services.upgrades.isShowing() then
-    local result = services.input.handleUIPointer(curState, vw, vh, vx, vy, uiHandlers)
-    if result then
-      local Player = require('src.game.player')
-      services.upgrades.applyTo(Player)
-    end
-    return
-  end
+  -- No temporary upgrade overlay - using persistent economy system
   
   -- Handle UI input
   local result = services.input.handleUIPointer(curState, vw, vh, vx, vy, uiHandlers)
@@ -286,15 +283,7 @@ function love.touchpressed(id, x, y, dx, dy, pressure)
   local vw, vh = services.scaling.getVirtualSize()
   local curState = services.state.get()
   
-  -- Handle upgrade overlay special case
-  if curState == "play" and services.upgrades.isShowing() then
-    local result = services.input.handleUIPointer(curState, vw, vh, vx, vy, uiHandlers)
-    if result then
-      local Player = require('src.game.player')
-      services.upgrades.applyTo(Player)
-    end
-    return
-  end
+  -- No temporary upgrade overlay - using persistent economy system
   
   -- Handle UI input
   local result = services.input.handleUIPointer(curState, vw, vh, vx, vy, uiHandlers)
@@ -310,6 +299,9 @@ function handleUIAction(action, curState)
       local gw, gh = services.scaling.getVirtualSize()
       services.game.init(gw, gh)
       services.state.set("play")
+    elseif action == "Upgrades" then
+      services.state.set("upgradeMenu")
+      services.upgradeMenu.init()
     elseif action == "Cosmetics" then
       services.state.set("cosmetics")
       services.cosmeticsUI.enter()

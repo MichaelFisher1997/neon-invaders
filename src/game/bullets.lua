@@ -25,10 +25,17 @@ local function getFree()
 end
 
 function Bullets.spawn(x, y, dy, from, damage, dx)
-  local Powerups = require("src.game.powerups")
+  local Economy = require("src.systems.economy")
   local b = getFree()
-  b.x, b.y, b.dy, b.dx, b.from, b.active, b.damage = x, y, dy, dx or 0, from or 'player', true, damage or 1
-  b.piercing = (from == 'player') and Powerups.hasPiercing()
+  
+  -- Apply economy damage multiplier for player bullets
+  local finalDamage = damage or 1
+  if (from == 'player') then
+    finalDamage = finalDamage * Economy.getDamageMultiplier()
+  end
+  
+  b.x, b.y, b.dy, b.dx, b.from, b.active, b.damage = x, y, dy, dx or 0, from or 'player', true, finalDamage
+  b.piercing = false -- No piercing in economy system
 end
 
 function Bullets.update(dt)

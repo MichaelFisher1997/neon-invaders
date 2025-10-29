@@ -33,43 +33,46 @@ Constants.BULLET = {
   offscreenMargin = 16,
 }
 
--- Powerup constants
-Constants.POWERUP = {
-  radius = 16,
-  poolSize = 16,
-  offscreenMargin = 32,
-  fallSpeed = 120,
-  maxActive = 1, -- Only one powerup at a time
-  types = {
-    rapid_fire = {
-      name = "Rapid Fire",
-      color = {1.0, 0.8, 0.2, 1.0}, -- Gold
-      duration = 4.0, -- Reduced from 8.0
-      effect = { fireRateMultiplier = 1.5 } -- Reduced from 2.0
+-- Economy/Upgrade constants
+Constants.ECONOMY = {
+  -- Currency conversion rates
+  scoreToCreditsRate = 0.01, -- 1% of score converted to credits
+  bossKillBonus = 100, -- Flat bonus for killing boss
+  specialAlienBonus = 25, -- Bonus for killing special aliens
+  
+  -- Upgrade costs and effects
+  upgrades = {
+    damage = {
+      name = "Damage",
+      baseCost = 50,
+      costMultiplier = 1.5,
+      maxLevel = 10,
+      effectPerLevel = 0.2, -- +20% damage per level
+      description = "Increases bullet damage by 20% per level"
     },
-    triple_shot = {
-      name = "Double Shot", -- Reduced from Triple
-      color = {0.2, 1.0, 0.8, 1.0}, -- Cyan
-      duration = 5.0, -- Reduced from 10.0
-      effect = { multiShot = 2 } -- Reduced from 3
+    fireRate = {
+      name = "Fire Rate",
+      baseCost = 75,
+      costMultiplier = 1.6,
+      maxLevel = 8,
+      effectPerLevel = 0.15, -- +15% fire rate per level
+      description = "Increases fire rate by 15% per level"
     },
-    shield = {
-      name = "Shield",
-      color = {0.8, 0.2, 1.0, 1.0}, -- Purple
-      duration = 6.0, -- Reduced from 12.0
-      effect = { invincible = true }
+    multiShot = {
+      name = "Multi-Shot",
+      baseCost = 200,
+      costMultiplier = 2.0,
+      maxLevel = 3,
+      effectPerLevel = 1, -- +1 additional shot per level
+      description = "Adds 1 additional bullet per shot"
     },
-    speed_boost = {
-      name = "Speed Boost",
-      color = {1.0, 0.4, 0.2, 1.0}, -- Orange
-      duration = 4.0, -- Reduced from 7.0
-      effect = { speedMultiplier = 1.3 } -- Reduced from 1.5
-    },
-    piercing = {
-      name = "Piercing Shots",
-      color = {1.0, 0.2, 0.4, 1.0}, -- Red
-      duration = 5.0, -- Reduced from 9.0
-      effect = { piercing = true }
+    speed = {
+      name = "Ship Speed",
+      baseCost = 40,
+      costMultiplier = 1.4,
+      maxLevel = 6,
+      effectPerLevel = 0.1, -- +10% speed per level
+      description = "Increases ship movement speed by 10% per level"
     }
   }
 }
