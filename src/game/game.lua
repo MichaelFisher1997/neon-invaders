@@ -53,12 +53,7 @@ end
 function Game.update(dt, input)
   if isGameOver then return end
 
-  -- Intermission upgrade
-  if Upgrades.isShowing() then
-    -- freeze gameplay while choosing
-    -- input handled via main keypressed (not here)
-    return
-  end
+  -- No temporary upgrade overlay in economy system
 
   Player.update(dt, input, function(x, y, dy, from, dmg)
     Bullets.spawn(x, y, dy, from, dmg)
@@ -219,17 +214,7 @@ function Game.update(dt, input)
           pendingNextCfg = Waves.configFor(wave + 1)
           bossSpawned = false
           return
-        else
-          -- Intermission already shown; wait for apply/confirm
-          if not Upgrades.isShowing() and pendingNextCfg then
-            wave = wave + 1
-            Bullets.clear('enemy')
-            Aliens.respawnFromConfig(pendingNextCfg, Player.y)
-            intermissionPending = false
-            pendingNextCfg = nil
-            bossSpawned = false
-            waveGraceTimer = 1.0
-          end
+
         end
       end
     else
@@ -259,18 +244,11 @@ function Game.update(dt, input)
     if Aliens.allCleared() then
       if not intermissionPending then
         Banner.trigger("WAVE CLEARED!")
-        if Upgrades.shouldShowForWave(wave) then
-          Upgrades.show()
-          intermissionPending = true
-          pendingNextCfg = Waves.configFor(wave + 1)
-          return
-        else
-          wave = wave + 1
-          local nextCfg = Waves.configFor(wave)
-          Bullets.clear('enemy')
-          Aliens.respawnFromConfig(nextCfg, Player.y)
-          waveGraceTimer = 1.0
-        end
+        wave = wave + 1
+        local nextCfg = Waves.configFor(wave)
+        Bullets.clear('enemy')
+        Aliens.respawnFromConfig(nextCfg, Player.y)
+        waveGraceTimer = 1.0
       else
         -- Intermission already shown previously; wait for apply
         if not Upgrades.isShowing() and pendingNextCfg then
