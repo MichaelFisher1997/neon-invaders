@@ -99,7 +99,10 @@ function love.keypressed(key)
     if action == 'quit' then love.event.quit() end
   elseif services.state.get() == "settings" then
     services.settingsUI.keypressed(key)
-    if key == "return" or key == "enter" then services.settings.save(); services.state.set("title"); services.title.enter() end
+    -- Don't auto-save and exit on Enter if confirmation dialog is active
+    if (key == "return" or key == "enter") and not services.settingsUI.isConfirmationActive() then 
+      services.settings.save(); services.state.set("title"); services.title.enter() 
+    end
   elseif services.state.get() == "cosmetics" then
     local action = services.cosmeticsUI.keypressed(key)
     if action == 'back' then services.state.set("title"); services.title.enter() end

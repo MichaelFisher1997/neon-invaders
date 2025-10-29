@@ -8,10 +8,13 @@ local entries = {
   { type = 'slider', key = 'musicVolume', label = 'Music' },
   { type = 'slider', key = 'sfxVolume', label = 'SFX' },
   { type = 'select', key = 'difficulty', label = 'Difficulty', options = { 'easy', 'normal', 'hard' } },
+  { type = 'action', key = 'clear', label = 'Clear User Data' },
   { type = 'action', key = 'back', label = 'Save & Back' },
 }
 
 local draggingIndex = nil
+local showConfirmDialog = false
+local confirmTimer = 0
 
 local function layoutRects(vw, vh)
   local x = vw/2 - slider.width/2
@@ -35,9 +38,59 @@ local function layoutRects(vw, vh)
   return rects, x, y, lineH
 end
 
+local function clearUserData()
+  -- Remove all save files
+  local filesToRemove = {
+    'settings.lua',
+    'economy', 
+    'cosmetics.lua',
+    'highscores.lua',
+    'save.dat'
+  }
+  
+  for _, filename in ipairs(filesToRemove) do
+    if love.filesystem.getInfo(filename) then
+      love.filesystem.remove(filename)
+    end
+  end
+  
+  -- Reset all in-memory systems
+  local Economy = require("src.systems.economy")
+  local Cosmetics = require("src.systems.cosmetics")
+  local Highscores = require("src.systems.highscores")
+  local Settings = require("src.systems.settings")
+  
+  Economy.reset()
+  Cosmetics.reset()
+  Highscores.reset()
+  Settings.reset()
+  
+  -- Clear module caches to force fresh reload
+  package.loaded["src.systems.economy"] = nil
+  package.loaded["src.systems.cosmetics"] = nil  
+  package.loaded["src.systems.highscores"] = nil
+  package.loaded["src.systems.settings"] = nil
+  
+  showConfirmDialog = false
+  confirmTimer = 0
+  
+  -- Force game to restart by returning to title
+  local state = require("src.core.state")
+  state.set("title")
+end
+
+local function playUISound()
+  local ok, audio = pcall(require, 'src.audio.audio')
+  if ok and audio then
+    pcall(function() audio.play('ui_click') end)
+  end
+end
+
 function UISettings.enter()
   selection = 1
   draggingIndex = nil
+  showConfirmDialog = false
+  confirmTimer = 0
 end
 
 local function drawSlider(x, y, value, label)
@@ -60,13 +113,48 @@ local function drawSlider(x, y, value, label)
 end
 
 function UISettings.update(dt)
-  -- no-op; discrete changes handled in keypressed
+  -- Update confirmation dialog timer
+  if showConfirmDialog and confirmTimer > 0 then
+    confirmTimer = confirmTimer - dt
+    if confirmTimer <= 0 then
+      showConfirmDialog = false
+      confirmTimer = 0
+    end
+  end
 end
 
 function UISettings.keypressed(key)
+  -- Handle confirmation dialog first
+  if showConfirmDialog then
+    if key == 'y' or key == 'Y' then
+      clearUserData()
+      playUISound()
+    elseif key == 'n' or key == 'N' or key == 'escape' then
+      showConfirmDialog = false
+      confirmTimer = 0
+      playUISound()
+    end
+    return
+  end
+  
   local s = Settings.get()
   if key == 'up' or key == 'w' then selection = math.max(1, selection - 1) return end
   if key == 'down' or key == 's' then selection = math.min(#entries, selection + 1) return end
+  if key == 'return' or key == 'kpenter' then
+    local cur = entries[selection]
+    if cur.type == 'action' then
+      if cur.key == 'clear' then
+        playUISound()
+        showConfirmDialog = true
+        confirmTimer = 3.0 -- Show dialog for 3 seconds
+      elseif cur.key == 'back' then
+        playUISound()
+        local state = require("src.core.state")
+        state.set("title")
+      end
+    end
+    return
+  end
 
   local cur = entries[selection]
   local function adjustSlider(delta)
@@ -139,10 +227,15 @@ function UISettings.draw(vw, vh)
   love.graphics.printf('<', leftX, diffY + 6, boxW, 'center')
   love.graphics.printf('>', rightX, diffY + 6, boxW, 'center')
 
+  -- Clear User Data action
+  love.graphics.setFont(love.graphics.newFont(22))
+  love.graphics.setColor(1,0.5,0.5, selection==4 and 1 or 0.8) -- Red color for dangerous action
+  love.graphics.printf("Clear User Data", 0, y + lineH*3 + 8, vw, 'center')
+
   -- Back action
   love.graphics.setFont(love.graphics.newFont(22))
-  love.graphics.setColor(1,1,1, selection==4 and 1 or 0.8)
-  love.graphics.printf("Save & Back (Enter)", 0, y + lineH*3 + 8, vw, 'center')
+  love.graphics.setColor(1,1,1, selection==5 and 1 or 0.8)
+  love.graphics.printf("Save & Back (Enter)", 0, y + lineH*4 + 8, vw, 'center')
 
   -- Selector highlight
   love.graphics.setColor(0.153, 0.953, 1.0, 0.25)
@@ -151,6 +244,44 @@ function UISettings.draw(vw, vh)
   love.graphics.setFont(love.graphics.newFont(14))
   love.graphics.setColor(1,1,1,0.7)
   love.graphics.printf("Tap/drag sliders. Tap arrows to change difficulty. Enter or tap Back to save.", 0, vh*0.88, vw, 'center')
+
+  -- Confirmation dialog
+  if showConfirmDialog then
+    local dialogW, dialogH = 400, 200
+    local dialogX = (vw - dialogW) / 2
+    local dialogY = (vh - dialogH) / 2
+    
+    -- Darken background
+    love.graphics.setColor(0, 0, 0, 0.7)
+    love.graphics.rectangle('fill', 0, 0, vw, vh)
+    
+    -- Dialog box
+    love.graphics.setColor(0.2, 0.2, 0.3, 0.95)
+    love.graphics.rectangle('fill', dialogX, dialogY, dialogW, dialogH, 12, 12)
+    love.graphics.setColor(0.5, 0.7, 1.0, 1.0)
+    love.graphics.rectangle('line', dialogX, dialogY, dialogW, dialogH, 12, 12)
+    
+    -- Dialog text
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.setFont(love.graphics.newFont(20))
+    love.graphics.printf("Clear All User Data?", dialogX, dialogY + 30, dialogW, 'center')
+    
+    love.graphics.setFont(love.graphics.newFont(16))
+    love.graphics.setColor(0.8, 0.8, 0.8, 1)
+    love.graphics.printf("This will permanently delete:", dialogX, dialogY + 70, dialogW, 'center')
+    love.graphics.printf("• All settings and preferences", dialogX, dialogY + 90, dialogW, 'center')
+    love.graphics.printf("• Economy progress and upgrades", dialogX, dialogY + 110, dialogW, 'center')
+    love.graphics.printf("• Cosmetics and high scores", dialogX, dialogY + 130, dialogW, 'center')
+    
+    love.graphics.setColor(1, 1, 1, 1)
+    love.graphics.printf("Press Y to confirm, N to cancel", dialogX, dialogY + 160, dialogW, 'center')
+    
+    -- Auto-cancel timer
+    if confirmTimer > 0 then
+      love.graphics.setColor(1, 1, 0.5, 1)
+      love.graphics.printf(string.format("Auto-cancel in %.1f seconds", confirmTimer), dialogX, dialogY + 180, dialogW, 'center')
+    end
+  end
 end
 
 function UISettings.pointerPressed(vw, vh, lx, ly)
@@ -178,7 +309,7 @@ function UISettings.pointerPressed(vw, vh, lx, ly)
     local barY = y + (idx-1)*lineH
     local rel = (lx - barX) / slider.width
     s[entry.key] = snap(rel)
-    require('src.audio.audio').play('ui_click')
+    playUISound()
     draggingIndex = idx
     return nil
   elseif entry.type == 'select' then
@@ -198,11 +329,17 @@ function UISettings.pointerPressed(vw, vh, lx, ly)
       cur = (cur % #opts) + 1
     end
     s.difficulty = opts[cur]
-    require('src.audio.audio').play('ui_click')
+    playUISound()
     return nil
-  elseif entry.type == 'action' and entry.key == 'back' then
-    require('src.audio.audio').play('ui_click')
-    return 'back'
+  elseif entry.type == 'action' then
+    if entry.key == 'clear' then
+      playUISound()
+      showConfirmDialog = true
+      confirmTimer = 3.0 -- Show dialog for 3 seconds
+    elseif entry.key == 'back' then
+      playUISound()
+      return 'back'
+    end
   end
   return nil
 end
@@ -226,6 +363,10 @@ end
 
 function UISettings.pointerReleased()
   draggingIndex = nil
+end
+
+function UISettings.isConfirmationActive()
+  return showConfirmDialog
 end
 
 return UISettings
