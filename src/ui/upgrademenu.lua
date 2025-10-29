@@ -123,11 +123,11 @@ function UpgradeMenu.draw()
   
   -- Title
   love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.setFont(Constants.FONTS.large)
+  love.graphics.setFont(love.graphics.newFont(48))
   love.graphics.printf("UPGRADES", 0, 40, VIRTUAL_WIDTH, "center")
   
   -- Credits display
-  love.graphics.setFont(Constants.FONTS.medium)
+  love.graphics.setFont(love.graphics.newFont(22))
   love.graphics.printf("Credits: " .. Economy.getCredits(), 0, 80, VIRTUAL_WIDTH, "center")
   
   -- Upgrade list
@@ -155,17 +155,17 @@ function UpgradeMenu.draw()
     
     -- Upgrade name
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.setFont(Constants.FONTS.medium)
+    love.graphics.setFont(love.graphics.newFont(22))
     love.graphics.print(info.name, 120, upgradeY + 10)
     
     -- Level indicator
-    love.graphics.setFont(Constants.FONTS.small)
+    love.graphics.setFont(love.graphics.newFont(16))
     love.graphics.printf("Level " .. info.currentLevel .. "/" .. info.maxLevel, 
                         0, upgradeY + 10, VIRTUAL_WIDTH - 120, "right")
     
     -- Description
     love.graphics.setColor(0.8, 0.8, 0.8, 1)
-    love.graphics.setFont(Constants.FONTS.small)
+    love.graphics.setFont(love.graphics.newFont(16))
     love.graphics.printf(info.description, 120, upgradeY + 35, VIRTUAL_WIDTH - 240, "left")
     
     -- Cost or maxed indicator
@@ -198,11 +198,11 @@ function UpgradeMenu.draw()
   love.graphics.rectangle("line", backButtonX, backButtonY, backButtonW, backButtonH)
   
   love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.setFont(Constants.FONTS.medium)
+  love.graphics.setFont(love.graphics.newFont(22))
   love.graphics.printf("BACK", backButtonX, backButtonY + 10, backButtonW, "center")
   
   -- Instructions
-  love.graphics.setFont(Constants.FONTS.small)
+  love.graphics.setFont(love.graphics.newFont(16))
   love.graphics.setColor(0.7, 0.7, 0.7, 1)
   love.graphics.printf("Use ↑↓ to select, ENTER/SPACE to purchase, ESC to go back", 
                         0, VIRTUAL_HEIGHT - 30, VIRTUAL_WIDTH, "center")
@@ -211,7 +211,7 @@ function UpgradeMenu.draw()
   if state.messageTimer > 0 then
     local alpha = math.min(1.0, state.messageTimer)
     love.graphics.setColor(1.0, 1.0, 0.5, alpha)
-    love.graphics.setFont(Constants.FONTS.medium)
+    love.graphics.setFont(love.graphics.newFont(22))
     love.graphics.printf(state.message, 0, VIRTUAL_HEIGHT / 2 - 20, VIRTUAL_WIDTH, "center")
   end
 end
