@@ -1,324 +1,332 @@
-local scaling = require("src.systems.scaling")
-local starfield = require("src.fx.starfield")
-local input = require("src.core.input")
-local state = require("src.core.state")
-local game = require("src.game.game")
-local hud = require("src.ui.hud")
-local title = require("src.ui.title")
-local pauseUI = require("src.ui.pause")
-local gameoverUI = require("src.ui.gameover")
-local screenshake = require("src.fx.screenshake")
-local settingsUI = require("src.ui.settings")
-local cosmeticsUI = require("src.ui.cosmetics")
-local settings = require("src.systems.settings")
-local upgrades = require("src.game.upgrades")
-local audio = require("src.audio.audio")
+-- Service container for dependency injection
+local services = {
+  scaling = require("src.systems.scaling"),
+  starfield = require("src.fx.starfield"),
+  input = require("src.core.input"),
+  state = require("src.core.state"),
+  game = require("src.game.game"),
+  hud = require("src.ui.hud"),
+  title = require("src.ui.title"),
+  pauseUI = require("src.ui.pause"),
+  gameoverUI = require("src.ui.gameover"),
+  screenshake = require("src.fx.screenshake"),
+  settingsUI = require("src.ui.settings"),
+  cosmeticsUI = require("src.ui.cosmetics"),
+  settings = require("src.systems.settings"),
+  upgrades = require("src.game.upgrades"),
+  audio = require("src.audio.audio"),
+  Constants = require("src.config.constants"),
+}
 
 local SHOW_DEBUG_TOUCH = false
+local SHOW_DEBUG_OVERLAY = false
+local COLORS = services.Constants.COLORS
 
-local COLORS = {
-  bg = {0.04, 0.04, 0.06, 1.0},
-  cyan = {0.153, 0.953, 1.0, 1.0},
-  magenta = {1.0, 0.182, 0.651, 1.0},
-  purple = {0.541, 0.169, 0.886, 1.0},
-  white = {1, 1, 1, 1},
+-- UI handlers for unified input processing
+local uiHandlers = {
+  title = services.title,
+  gameover = services.gameoverUI,
+  settings = services.settingsUI,
+  cosmetics = services.cosmeticsUI,
+  upgrades = services.upgrades,
 }
 
 function love.load()
-  scaling.setup()
-  local vw, vh = scaling.getVirtualSize()
-  starfield.init(vw, vh)
+  services.scaling.setup()
+  local vw, vh = services.scaling.getVirtualSize()
+  services.starfield.init(vw, vh)
   love.window.setTitle("Neon Invaders")
-  state.set("title")
-  title.enter()
-  audio.load()
-  audio.setMusic(audio.music)
+  services.state.set("title")
+  services.title.enter()
+  services.audio.load()
+  services.audio.setMusic(services.audio.music)
 end
 
 function love.resize(w, h)
-  scaling.resize(w, h)
+  services.scaling.resize(w, h)
 end
 
 function love.keypressed(key)
-  input.keypressed(key)
+  services.input.keypressed(key)
   if key == "f1" then SHOW_DEBUG_TOUCH = not SHOW_DEBUG_TOUCH end
-  if state.get() == "title" then
-    title.keypressed(key)
+  if key == "f2" then SHOW_DEBUG_OVERLAY = not SHOW_DEBUG_OVERLAY end
+  if services.state.get() == "title" then
+    services.title.keypressed(key)
     if key == "space" or key == "return" or key == "enter" then
-      local sel = title.getSelected()
+      local sel = services.title.getSelected()
       if sel == "Start" then
-        local vw, vh = scaling.getVirtualSize()
-        game.init(vw, vh)
-        state.set("play")
+        local vw, vh = services.scaling.getVirtualSize()
+        services.game.init(vw, vh)
+        services.state.set("play")
       elseif sel == "Cosmetics" then
-        state.set("cosmetics")
-        cosmeticsUI.enter()
+        services.state.set("cosmetics")
+        services.cosmeticsUI.enter()
       elseif sel == "Settings" then
-        state.set("settings")
-        settingsUI.enter()
+        services.state.set("settings")
+        services.settingsUI.enter()
       elseif sel == "Quit" then
         love.event.quit()
       end
     end
-  elseif state.get() == "play" and upgrades.isShowing() then
+  elseif services.state.get() == "play" and services.upgrades.isShowing() then
     -- Handle upgrade overlay input BEFORE normal play handling
-    upgrades.keypressed(key)
+    services.upgrades.keypressed(key)
     if key == "return" or key == "enter" then
       local Player = require('src.game.player')
-      upgrades.applyTo(Player)
+      services.upgrades.applyTo(Player)
     end
     return
-  elseif state.get() == "play" then
+  elseif services.state.get() == "play" then
     if key == "escape" then
-      state.set("pause")
+      services.state.set("pause")
     end
-  elseif state.get() == "pause" then
-    if key == "escape" then state.set("play") end
-    if key == "r" then local vw, vh = scaling.getVirtualSize(); game.init(vw, vh); state.set("play") end
-    if key == "q" then state.set("title"); title.enter() end
-  elseif state.get() == "gameover" then
-    local action = gameoverUI.keypressed(key)
-    if action == 'retry' then local vw, vh = scaling.getVirtualSize(); game.init(vw, vh); state.set("play") end
-    if action == 'menu' then state.set("title"); title.enter() end
+  elseif services.state.get() == "pause" then
+    if key == "escape" then services.state.set("play") end
+    if key == "r" then local vw, vh = services.scaling.getVirtualSize(); services.game.init(vw, vh); services.state.set("play") end
+    if key == "q" then services.state.set("title"); services.title.enter() end
+  elseif services.state.get() == "gameover" then
+    local action = services.gameoverUI.keypressed(key)
+    if action == 'retry' then local vw, vh = services.scaling.getVirtualSize(); services.game.init(vw, vh); services.state.set("play") end
+    if action == 'menu' then services.state.set("title"); services.title.enter() end
     if action == 'quit' then love.event.quit() end
-  elseif state.get() == "settings" then
-    settingsUI.keypressed(key)
-    if key == "return" or key == "enter" then settings.save(); state.set("title"); title.enter() end
-  elseif state.get() == "cosmetics" then
-    local action = cosmeticsUI.keypressed(key)
-    if action == 'back' then state.set("title"); title.enter() end
+  elseif services.state.get() == "settings" then
+    services.settingsUI.keypressed(key)
+    if key == "return" or key == "enter" then services.settings.save(); services.state.set("title"); services.title.enter() end
+  elseif services.state.get() == "cosmetics" then
+    local action = services.cosmeticsUI.keypressed(key)
+    if action == 'back' then services.state.set("title"); services.title.enter() end
   end
 end
 
 function love.update(dt)
-  scaling.update()
-  input.update(dt)
-  starfield.update(dt)
-  screenshake.update(dt)
-  audio.update()
-  local cur = state.get()
+  services.scaling.update()
+  services.input.update(dt)
+  services.starfield.update(dt)
+  services.screenshake.update(dt)
+  services.audio.update()
+  local cur = services.state.get()
   if cur == "title" then
-    title.update(dt)
+    services.title.update(dt)
   elseif cur == "settings" then
-    settingsUI.update(dt)
+    services.settingsUI.update(dt)
   elseif cur == "cosmetics" then
-    cosmeticsUI.update(dt)
+    services.cosmeticsUI.update(dt)
   elseif cur == "play" then
-    game.update(dt, input.get())
-    if game.isOver() then gameoverUI.enter(); state.set("gameover") end
-  elseif state.get() == "pause" then
+    services.game.update(dt, services.input.get())
+    if services.game.isOver() then services.gameoverUI.enter(); services.state.set("gameover") end
+  elseif services.state.get() == "pause" then
     -- paused, no game update
-  elseif state.get() == "gameover" then
+  elseif services.state.get() == "gameover" then
     -- awaiting input
   end
 end
 
 function love.draw()
-  scaling.begin()
+  services.scaling.begin()
 
-  local vw, vh = scaling.getVirtualSize()
-  local leftPanel, centerPanel, rightPanel = scaling.getPanelsVirtual()
-  local cur = state.get()
+  local vw, vh = services.scaling.getVirtualSize()
+  local leftPanel, centerPanel, rightPanel = services.scaling.getPanelsVirtual()
+  local cur = services.state.get()
 
   -- Draw background only in center viewport to avoid space behind controls
-  scaling.pushViewport(centerPanel)
-  starfield.draw()
-  scaling.popViewport()
+  services.scaling.pushViewport(centerPanel)
+  services.starfield.draw()
+  services.scaling.popViewport()
 
   if cur == "title" then
-    title.draw(vw, vh)
+    services.title.draw(vw, vh)
   elseif cur == "settings" then
-    settingsUI.draw(vw, vh)
+    services.settingsUI.draw(vw, vh)
   elseif cur == "cosmetics" then
-    cosmeticsUI.draw(vw, vh)
+    services.cosmeticsUI.draw(vw, vh)
   else
     -- Center viewport for gameplay states
-    scaling.pushViewport(centerPanel)
+    services.scaling.pushViewport(centerPanel)
     if cur == "play" or cur == "pause" or cur == "gameover" then
-      screenshake.apply()
+      services.screenshake.apply()
       -- draw world relative to center viewport origin
-      game.draw()
-      screenshake.pop()
-      local score, lives, wave = game.getHUD()
-      hud.draw(score, lives, wave, centerPanel.w, centerPanel.h)
+      services.game.draw()
+      services.screenshake.pop()
+      local score, lives, wave = services.game.getHUD()
+      services.hud.draw(score, lives, wave, centerPanel.w, centerPanel.h)
       if cur == "pause" then
-        pauseUI.draw(centerPanel.w, centerPanel.h)
+        services.pauseUI.draw(centerPanel.w, centerPanel.h)
       elseif cur == "gameover" then
-        local scoreOnly = select(1, game.getHUD())
-        gameoverUI.draw(scoreOnly, centerPanel.w, centerPanel.h)
+        local scoreOnly = select(1, services.game.getHUD())
+        services.gameoverUI.draw(scoreOnly, centerPanel.w, centerPanel.h)
       end
-      if upgrades.isShowing() then upgrades.draw(centerPanel.w, centerPanel.h) end
+      if services.upgrades.isShowing() then services.upgrades.draw(centerPanel.w, centerPanel.h) end
     end
-    scaling.popViewport()
+    services.scaling.popViewport()
 
     -- Side panels frame + controls
     -- Always draw framed side panels; draw controls during play
-    scaling.pushViewport(leftPanel)
-    hud.drawPanelFrame(leftPanel.w, leftPanel.h)
-    if cur == "play" then hud.drawLeftControls(leftPanel.w, leftPanel.h) end
-    scaling.popViewport()
-    scaling.pushViewport(rightPanel)
-    hud.drawPanelFrame(rightPanel.w, rightPanel.h)
-    if cur == "play" then hud.drawRightControls(rightPanel.w, rightPanel.h) end
-    scaling.popViewport()
+    services.scaling.pushViewport(leftPanel)
+    services.hud.drawPanelFrame(leftPanel.w, leftPanel.h)
+    if cur == "play" then services.hud.drawLeftControls(leftPanel.w, leftPanel.h) end
+    services.scaling.popViewport()
+    services.scaling.pushViewport(rightPanel)
+    services.hud.drawPanelFrame(rightPanel.w, rightPanel.h)
+    if cur == "play" then services.hud.drawRightControls(rightPanel.w, rightPanel.h) end
+    services.scaling.popViewport()
   end
 
-  scaling.finish()
+  services.scaling.finish()
 
   if SHOW_DEBUG_TOUCH then
-    input.drawDebug()
+    services.input.drawDebug()
+  end
+  
+  -- Debug overlay with FPS and entity counts
+  if SHOW_DEBUG_OVERLAY then
+    drawDebugOverlay()
   end
 end
 
--- Handle mouse/touch selection for upgrade overlay (desktop + mobile)
-function love.mousepressed(x, y, button)
-  if state.get() == "play" and upgrades.isShowing() then
-    local vx, vy = scaling.toVirtual(x, y)
-    local leftPanel, centerPanel = scaling.getPanelsVirtual()
-    local lx = vx - centerPanel.x
-    local ly = vy - centerPanel.y
-    if lx >= 0 and lx <= centerPanel.w and ly >= 0 and ly <= centerPanel.h then
-      if upgrades.pointerPressed(centerPanel.w, centerPanel.h, lx, ly) then
-        local Player = require('src.game.player')
-        upgrades.applyTo(Player)
-      end
-    end
-    return
-  elseif state.get() == "title" then
-    local vx, vy = scaling.toVirtual(x, y)
-    local vw, vh = scaling.getVirtualSize()
-    local sel = title.pointerPressed(vw, vh, vx, vy)
-    if sel == "Start" then
-      local gw, gh = scaling.getVirtualSize(); game.init(gw, gh); state.set("play")
-    elseif sel == "Cosmetics" then
-      state.set("cosmetics"); cosmeticsUI.enter()
-    elseif sel == "Settings" then
-      state.set("settings"); settingsUI.enter()
-    elseif sel == "Quit" then
-      love.event.quit()
-    end
-    if sel then return end
-  elseif state.get() == "gameover" then
-    local vx, vy = scaling.toVirtual(x, y)
-    local leftPanel, centerPanel = scaling.getPanelsVirtual()
-    local lx = vx - centerPanel.x
-    local ly = vy - centerPanel.y
-    if lx >= 0 and lx <= centerPanel.w and ly >= 0 and ly <= centerPanel.h then
-      local action = gameoverUI.pointerPressed(centerPanel.w, centerPanel.h, lx, ly)
-      if action == 'retry' then local vw, vh = scaling.getVirtualSize(); game.init(vw, vh); state.set("play") end
-      if action == 'menu' then state.set("title"); title.enter() end
-      if action == 'quit' then love.event.quit() end
-    end
-    return
-  elseif state.get() == "settings" then
-    local vx, vy = scaling.toVirtual(x, y)
-    local vw, vh = scaling.getVirtualSize()
-    local action = settingsUI.pointerPressed(vw, vh, vx, vy)
-    if action == 'back' then settings.save(); state.set("title"); title.enter() end
-    if action then return end
-  elseif state.get() == "cosmetics" then
-    local vx, vy = scaling.toVirtual(x, y)
-    local vw, vh = scaling.getVirtualSize()
-    local action = cosmeticsUI.pointerPressed(vw, vh, vx, vy)
-    if action == 'back' then state.set("title"); title.enter() end
-    if action then return end
+-- Draw debug overlay with performance metrics
+function drawDebugOverlay()
+  local font = love.graphics.getFont()
+  local fps = love.timer.getFPS()
+  
+  -- Count active entities
+  local bulletCount = 0
+  local alienCount = 0
+  local particleCount = 0
+  
+  -- Count bullets
+  local Bullets = require("src.game.bullets")
+  Bullets.eachActive(function() bulletCount = bulletCount + 1 end)
+  
+  -- Get game state for additional info
+  local curState = services.state.get()
+  local score, lives, wave = 0, 0, 0
+  if curState == "play" or curState == "pause" or curState == "gameover" then
+    score, lives, wave = services.game.getHUD()
   end
+  
+  -- Draw overlay background
+  love.graphics.setColor(0, 0, 0, 0.7)
+  love.graphics.rectangle("fill", 10, 10, 200, 120)
+  
+  -- Draw text
+  love.graphics.setColor(1, 1, 1, 1)
+  love.graphics.print("DEBUG OVERLAY", 15, 15)
+  love.graphics.print("FPS: " .. fps, 15, 35)
+  love.graphics.print("State: " .. curState, 15, 50)
+  love.graphics.print("Bullets: " .. bulletCount, 15, 65)
+  love.graphics.print("Score: " .. score, 15, 80)
+  love.graphics.print("Lives: " .. lives, 15, 95)
+  love.graphics.print("Wave: " .. wave, 15, 110)
+  
+  -- Instructions
+  love.graphics.setColor(1, 1, 0, 1)
+  love.graphics.print("Press F2 to toggle", 15, 130)
+end
+
+-- Unified mouse/touch handlers using input system
+function love.mousepressed(x, y, button)
+  local vx, vy = services.scaling.toVirtual(x, y)
+  local vw, vh = services.scaling.getVirtualSize()
+  local curState = services.state.get()
+  
+  -- Handle upgrade overlay special case
+  if curState == "play" and services.upgrades.isShowing() then
+    local result = services.input.handleUIPointer(curState, vw, vh, vx, vy, uiHandlers)
+    if result then
+      local Player = require('src.game.player')
+      services.upgrades.applyTo(Player)
+    end
+    return
+  end
+  
+  -- Handle UI input
+  local result = services.input.handleUIPointer(curState, vw, vh, vx, vy, uiHandlers)
+  handleUIAction(result, curState)
 end
 
 function love.mousemoved(x, y, dx, dy, istouch)
-  if state.get() == "settings" then
-    local vx, vy = scaling.toVirtual(x, y)
-    local vw, vh = scaling.getVirtualSize()
-    settingsUI.pointerMoved(vw, vh, vx, vy)
-  elseif state.get() == "cosmetics" then
-    local vx, vy = scaling.toVirtual(x, y)
-    local vw, vh = scaling.getVirtualSize()
-    cosmeticsUI.pointerMoved(vw, vh, vx, vy)
-  end
+  local vx, vy = services.scaling.toVirtual(x, y)
+  local vw, vh = services.scaling.getVirtualSize()
+  services.input.handleUIMove(services.state.get(), vw, vh, vx, vy, uiHandlers)
 end
 
 function love.mousereleased(x, y, button)
-  if state.get() == "settings" then
-    settingsUI.pointerReleased()
-  elseif state.get() == "cosmetics" then
-    local vx, vy = scaling.toVirtual(x, y)
-    local vw, vh = scaling.getVirtualSize()
-    cosmeticsUI.pointerReleased(vw, vh, vx, vy)
-  end
+  local vx, vy = services.scaling.toVirtual(x, y)
+  local vw, vh = services.scaling.getVirtualSize()
+  services.input.handleUIRelease(services.state.get(), vw, vh, vx, vy, uiHandlers)
 end
 
 function love.touchmoved(id, x, y, dx, dy, pressure)
-  if state.get() == "settings" then
-    local vx, vy = scaling.toVirtual(x, y)
-    local vw, vh = scaling.getVirtualSize()
-    settingsUI.pointerMoved(vw, vh, vx, vy)
-  elseif state.get() == "cosmetics" then
-    local vx, vy = scaling.toVirtual(x, y)
-    local vw, vh = scaling.getVirtualSize()
-    cosmeticsUI.pointerMoved(vw, vh, vx, vy)
-  end
+  local vx, vy = services.scaling.toVirtual(x, y)
+  local vw, vh = services.scaling.getVirtualSize()
+  services.input.handleUIMove(services.state.get(), vw, vh, vx, vy, uiHandlers)
 end
 
 function love.touchreleased(id, x, y, dx, dy, pressure)
-  if state.get() == "settings" then
-    settingsUI.pointerReleased()
-  elseif state.get() == "cosmetics" then
-    local vx, vy = scaling.toVirtual(x, y)
-    local vw, vh = scaling.getVirtualSize()
-    cosmeticsUI.pointerReleased(vw, vh, vx, vy)
-  end
+  local vx, vy = services.scaling.toVirtual(x, y)
+  local vw, vh = services.scaling.getVirtualSize()
+  services.input.handleUIRelease(services.state.get(), vw, vh, vx, vy, uiHandlers)
 end
 
 function love.touchpressed(id, x, y, dx, dy, pressure)
-  if state.get() == "play" and upgrades.isShowing() then
-    local vx, vy = scaling.toVirtual(x, y)
-    local leftPanel, centerPanel = scaling.getPanelsVirtual()
-    local lx = vx - centerPanel.x
-    local ly = vy - centerPanel.y
-    if lx >= 0 and lx <= centerPanel.w and ly >= 0 and ly <= centerPanel.h then
-      if upgrades.pointerPressed(centerPanel.w, centerPanel.h, lx, ly) then
-        local Player = require('src.game.player')
-        upgrades.applyTo(Player)
-      end
+  local vx, vy = services.scaling.toVirtual(x, y)
+  local vw, vh = services.scaling.getVirtualSize()
+  local curState = services.state.get()
+  
+  -- Handle upgrade overlay special case
+  if curState == "play" and services.upgrades.isShowing() then
+    local result = services.input.handleUIPointer(curState, vw, vh, vx, vy, uiHandlers)
+    if result then
+      local Player = require('src.game.player')
+      services.upgrades.applyTo(Player)
     end
     return
-  elseif state.get() == "title" then
-    local vx, vy = scaling.toVirtual(x, y)
-    local vw, vh = scaling.getVirtualSize()
-    local sel = title.pointerPressed(vw, vh, vx, vy)
-    if sel == "Start" then
-      local gw, gh = scaling.getVirtualSize(); game.init(gw, gh); state.set("play")
-    elseif sel == "Cosmetics" then
-      state.set("cosmetics"); cosmeticsUI.enter()
-    elseif sel == "Settings" then
-      state.set("settings"); settingsUI.enter()
-    elseif sel == "Quit" then
+  end
+  
+  -- Handle UI input
+  local result = services.input.handleUIPointer(curState, vw, vh, vx, vy, uiHandlers)
+  handleUIAction(result, curState)
+end
+
+-- Helper function to handle UI actions
+function handleUIAction(action, curState)
+  if not action then return end
+  
+  if curState == "title" then
+    if action == "Start" then
+      local gw, gh = services.scaling.getVirtualSize()
+      services.game.init(gw, gh)
+      services.state.set("play")
+    elseif action == "Cosmetics" then
+      services.state.set("cosmetics")
+      services.cosmeticsUI.enter()
+    elseif action == "Settings" then
+      services.state.set("settings")
+      services.settingsUI.enter()
+    elseif action == "Quit" then
       love.event.quit()
     end
-    if sel then return end
-  elseif state.get() == "gameover" then
-    local vx, vy = scaling.toVirtual(x, y)
-    local leftPanel, centerPanel = scaling.getPanelsVirtual()
-    local lx = vx - centerPanel.x
-    local ly = vy - centerPanel.y
-    if lx >= 0 and lx <= centerPanel.w and ly >= 0 and ly <= centerPanel.h then
-      local action = gameoverUI.pointerPressed(centerPanel.w, centerPanel.h, lx, ly)
-      if action == 'retry' then local vw, vh = scaling.getVirtualSize(); game.init(vw, vh); state.set("play") end
-      if action == 'menu' then state.set("title"); title.enter() end
-      if action == 'quit' then love.event.quit() end
+  elseif curState == "gameover" then
+    if action == 'retry' then
+      local vw, vh = services.scaling.getVirtualSize()
+      services.game.init(vw, vh)
+      services.state.set("play")
+    elseif action == 'menu' then
+      services.state.set("title")
+      services.title.enter()
+    elseif action == 'quit' then
+      love.event.quit()
     end
-    return
-  elseif state.get() == "settings" then
-    local vx, vy = scaling.toVirtual(x, y)
-    local vw, vh = scaling.getVirtualSize()
-    local action = settingsUI.pointerPressed(vw, vh, vx, vy)
-    if action == 'back' then settings.save(); state.set("title"); title.enter() end
-    if action then return end
-  elseif state.get() == "cosmetics" then
-    local vx, vy = scaling.toVirtual(x, y)
-    local vw, vh = scaling.getVirtualSize()
-    local action = cosmeticsUI.pointerPressed(vw, vh, vx, vy)
-    if action == 'back' then state.set("title"); title.enter() end
-    if action then return end
+  elseif curState == "settings" then
+    if action == 'back' then
+      services.settings.save()
+      services.state.set("title")
+      services.title.enter()
+    end
+  elseif curState == "cosmetics" then
+    if action == 'back' then
+      services.state.set("title")
+      services.title.enter()
+    end
   end
 end
