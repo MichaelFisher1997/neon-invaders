@@ -10,7 +10,7 @@ function Diving.spawnFromConfig(cfg, vw, vh)
   
   local data = BossBase.createBossData(cfg, 140, 60, 1.0)
   data.state = "horizontal" -- "horizontal", "diving", or "floating"
-  data.diveTimer = 3.0 -- Time between dives
+  data.diveTimer = 5.0 -- Time at top before diving (5 seconds)
   data.diveSpeed = 300
   data.floatSpeed = 120 -- Speed for floating back up
   data.horizontalSpeed = 80
@@ -56,7 +56,7 @@ function Diving.update(dt)
     -- Start dive when timer expires
     if data.diveTimer <= 0 then
       data.state = "diving"
-      data.diveTimer = 4.0 -- Reset for next cycle
+      -- Don't reset timer here - reset when returning to horizontal
     end
     
   elseif data.state == "diving" then
@@ -87,10 +87,11 @@ function Diving.update(dt)
       data.bombCooldown = 0.4
     end
     
-    -- Reached top, resume horizontal movement
+    -- Reached top, resume horizontal movement and reset dive timer
     if data.y <= data.topY then
       data.state = "horizontal"
       data.y = data.topY
+      data.diveTimer = 5.0 -- Reset to 5 seconds at top
     end
   end
 end
