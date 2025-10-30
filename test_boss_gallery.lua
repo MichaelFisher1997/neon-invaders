@@ -36,7 +36,26 @@ print("✓ Boss gallery entered successfully")
 BossGallery.spawnDemoBoss(1)
 print("✓ Demo boss 1 spawned successfully")
 
+-- Verify boss positioning (should be at top like in-game)
+local BossBase = require("src.game.boss.base")
+local data = BossBase.getData()
+if data and data.y == 140 then
+  print("✓ Boss positioned at top like in-game waves")
+else
+  print("✗ Boss not positioned correctly")
+  os.exit(1)
+end
+
 BossGallery.spawnDemoBoss(2)
 print("✓ Demo boss 2 spawned successfully")
+
+-- Test bullet system
+local Bullets = require("src.game.bullets")
+if Bullets then
+  print("✓ Bullet system available for attack patterns")
+else
+  print("✗ Bullet system not available")
+  os.exit(1)
+end
 
 print("\n✅ All boss gallery tests passed!")

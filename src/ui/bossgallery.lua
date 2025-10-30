@@ -92,6 +92,10 @@ function BossGallery.spawnDemoBoss(index)
     require("src.game.boss." .. demoBoss).cleanup()
   end
   
+  -- Clear bullets from previous demo
+  local Bullets = require("src.game.bullets")
+  Bullets.clear()
+  
   -- Create demo configuration
   local demoCfg = {
     wave = (index - 1) * 5 + 5, -- Use appropriate wave
@@ -101,16 +105,21 @@ function BossGallery.spawnDemoBoss(index)
   local BossModule = require("src.game.boss." .. info.module)
   BossModule.spawnFromConfig(demoCfg, 1280, 720)
   
-  -- Reposition boss for gallery display (center-right area)
+  -- Reposition boss for gallery display (top like in-game)
   local BossBase = require("src.game.boss.base")
   local data = BossBase.getData()
   if data then
     -- Use virtual dimensions for consistent positioning
     local vw, vh = BossBase.getVirtualSize()
-    data.x = vw - 300    -- Position on right side
-    data.y = vh / 2      -- Center vertically  
+    data.x = vw / 2      -- Center horizontally
+    data.y = 140         -- Position at top like in waves
     data.speed = 0       -- Keep stationary for gallery
   end
+  
+  -- Set up mock player position for targeting (bottom center of screen)
+  local Player = require("src.game.player")
+  Player.x = BossBase.getVirtualSize() / 2
+  Player.y = BossBase.getVirtualSize() - 100
   
   demoBoss = info.module
   demoTimer = 0
@@ -128,6 +137,10 @@ function BossGallery.update(dt)
     if BossModule.update then
       BossModule.update(dt)
     end
+    
+    -- Update bullets so they move across screen
+    local Bullets = require("src.game.bullets")
+    Bullets.update(dt)
   end
 end
 
@@ -187,14 +200,19 @@ function BossGallery.draw(vw, vh)
   love.graphics.setColor(0.04, 0.04, 0.06, 1.0)
   love.graphics.rectangle('fill', 0, 0, vw, vh)
   
-  -- Draw demo boss as background element
+  -- Draw demo boss and bullets
   if demoBoss then
-    love.graphics.setColor(1, 1, 1, 0.4) -- Semi-transparent background element
+    -- Draw boss at full opacity
+    love.graphics.setColor(1, 1, 1, 1.0)
     
     local BossModule = require("src.game.boss." .. demoBoss)
     if BossModule.draw then
       BossModule.draw()
     end
+    
+    -- Draw bullets
+    local Bullets = require("src.game.bullets")
+    Bullets.draw()
   end
   
   -- Title
@@ -210,56 +228,53 @@ function BossGallery.draw(vw, vh)
   love.graphics.setFont(love.graphics.newFont(18))
   love.graphics.printf("Back", 20, 35, 100, 'center')
   
-  -- Boss cards - draw on left side
-  local cardX = 50
-  local cardWidth = 350
+  -- Boss cards - draw on left side with transparency
+  local cardX = 20
+  local cardWidth = 300
   for i, info in ipairs(bossInfo) do
-    local cardY = 100 + (i - 1) * 120 + scroll
+    local cardY = 100 + (i - 1) * 100 + scroll
     
     -- Only draw if card is visible on screen
-    if cardY >= -120 and cardY <= vh + 120 then
-      local card = {x = cardX, y = cardY, w = cardWidth, h = 110}
+    if cardY >= -100 and cardY <= vh + 100 then
+      local card = {x = cardX, y = cardY, w = cardWidth, h = 90}
       
-      -- Card background
+      -- Semi-transparent background for cards
       if i == selected then
-        love.graphics.setColor(0.153, 0.953, 1.0, 0.2)
+        love.graphics.setColor(0.153, 0.953, 1.0, 0.3)
+        love.graphics.rectangle('fill', card.x, card.y, card.w, card.h, 12, 12)
+      else
+        love.graphics.setColor(0, 0, 0, 0.5)
         love.graphics.rectangle('fill', card.x, card.y, card.w, card.h, 12, 12)
       end
       
-      love.graphics.setColor(1, 1, 1, 1)
+      love.graphics.setColor(1, 1, 1, 0.8)
       love.graphics.rectangle('line', card.x, card.y, card.w, card.h, 12, 12)
       
       -- Boss icon (colored square)
       love.graphics.setColor(info.color)
-      love.graphics.rectangle('fill', card.x + 15, card.y + 15, 30, 30, 6, 6)
+      love.graphics.rectangle('fill', card.x + 10, card.y + 10, 25, 25, 6, 6)
       
       -- Boss name
       love.graphics.setColor(1, 1, 1, 1)
-      love.graphics.setFont(love.graphics.newFont(20))
-      love.graphics.print(info.name, card.x + 60, card.y + 20)
+      love.graphics.setFont(love.graphics.newFont(16))
+      love.graphics.print(info.name, card.x + 45, card.y + 15)
       
       -- Waves
-      love.graphics.setFont(love.graphics.newFont(14))
-      love.graphics.setColor(0.153, 0.953, 1.0, 1.0)
-      love.graphics.print(info.waves, card.x + 60, card.y + 45)
-      
-      -- Description (wrapped properly)
-      love.graphics.setColor(1, 1, 1, 0.8)
       love.graphics.setFont(love.graphics.newFont(12))
-      love.graphics.printf(info.description, card.x + 15, card.y + 70, card.w - 30, 'left')
+      love.graphics.setColor(0.153, 0.953, 1.0, 1.0)
+      love.graphics.print(info.waves, card.x + 45, card.y + 35)
       
-      -- Attacks (below description with proper wrapping)
-      love.graphics.setFont(love.graphics.newFont(11))
-      love.graphics.setColor(1, 1, 1, 0.6)
-      local attackText = "Attacks: " .. table.concat(info.attacks, ", ")
-      love.graphics.printf(attackText, card.x + 15, card.y + 90, card.w - 30, 'left')
+      -- Description (shortened)
+      love.graphics.setColor(1, 1, 1, 0.7)
+      love.graphics.setFont(love.graphics.newFont(10))
+      love.graphics.printf(info.description, card.x + 10, card.y + 55, card.w - 20, 'left')
     end
   end
   
   -- Navigation hint
-  love.graphics.setFont(love.graphics.newFont(16))
-  love.graphics.setColor(1, 1, 1, 0.7)
-  love.graphics.printf("Up/Down to browse • ESC to return", 0, vh - 30, vw, 'center')
+  love.graphics.setFont(love.graphics.newFont(14))
+  love.graphics.setColor(1, 1, 1, 0.8)
+  love.graphics.printf("↑↓ Browse bosses • ESC Return • Watch attack patterns", 0, vh - 25, vw, 'center')
 end
 
 return BossGallery
