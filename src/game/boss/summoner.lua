@@ -69,8 +69,8 @@ function Summoner.update(dt)
     if minion.y > vh then
       -- Create explosion effect at bottom
       local Particles = require("src.fx.particles")
-      if Particles and Particles.createExplosion then
-        Particles.createExplosion(minion.x, vh - 20, 0.5)
+      if Particles and Particles.burst then
+        Particles.burst(minion.x, vh - 20, {1.0, 0.5, 1.0}, 24, 200)
       end
       table.remove(data.minions, i)
     end

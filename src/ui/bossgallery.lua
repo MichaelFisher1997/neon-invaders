@@ -43,8 +43,8 @@ local bossInfo = {
   {
     name = "Summoner Boss",
     waves = "Waves 25-29",
-    description = "Spawns mini-enemies while attacking directly. Focus on minions or boss?",
-    attacks = {"Minion spawning", "Aimed shots", "Shotgun bursts"},
+    description = "Launches homing missiles that track player position. Missiles explode at screen bottom.",
+    attacks = {"Homing missiles", "Aimed shots", "Shotgun bursts"},
     color = {0.6, 0.2, 0.8, 1}, -- Purple
     module = "summoner"
   },
@@ -163,6 +163,12 @@ function BossGallery.update(dt)
     -- Update bullets so they move across screen
     local Bullets = require("src.game.bullets")
     Bullets.update(dt)
+    
+    -- Update particles for explosion effects
+    local Particles = require("src.fx.particles")
+    if Particles.update then
+      Particles.update(dt)
+    end
   end
 end
 
@@ -235,6 +241,12 @@ function BossGallery.draw(vw, vh)
     -- Draw bullets
     local Bullets = require("src.game.bullets")
     Bullets.draw()
+    
+    -- Draw particles for explosion effects
+    local Particles = require("src.fx.particles")
+    if Particles.draw then
+      Particles.draw()
+    end
   end
   
   -- Title
