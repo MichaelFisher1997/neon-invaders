@@ -277,7 +277,7 @@ function UpgradeMenu.draw()
   love.graphics.setFont(love.graphics.newFont(12))
   love.graphics.setColor(0.5, 0.8, 1.0, 0.8)
   love.graphics.printf("↑↓ Select • ENTER/SPACE Purchase • ESC Back", 
-                        0, VIRTUAL_HEIGHT - 10, VIRTUAL_WIDTH, "center")
+                        0, VIRTUAL_HEIGHT - 20, VIRTUAL_WIDTH, "center")
   
   -- Message display with neon styling
   if state.messageTimer > 0 then
