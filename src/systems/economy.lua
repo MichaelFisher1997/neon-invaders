@@ -10,6 +10,7 @@ local state = {
     damage = 0,
     fireRate = 0,
     multiShot = 0,
+    piercing = 0,
     speed = 0
   }
 }
@@ -25,6 +26,7 @@ function Economy.init()
       damage = 0,
       fireRate = 0,
       multiShot = 0,
+      piercing = 0,
       speed = 0
     }
   end
@@ -164,22 +166,32 @@ function Economy.getMultiShotCount()
   return 1 + (level * Constants.ECONOMY.upgrades.multiShot.effectPerLevel)
 end
 
+function Economy.getPiercingLevel()
+  return state.upgrades.piercing or 0
+end
+
 function Economy.getSpeedMultiplier()
   local level = state.upgrades.speed or 0
   return 1.0 + (level * Constants.ECONOMY.upgrades.speed.effectPerLevel)
 end
 
--- Reset economy (for testing/new game)
+-- Reset economy to defaults (used by settings clear data)
 function Economy.reset()
-  state.credits = 0
-  state.totalCreditsEarned = 0
-  state.upgrades = {
-    damage = 0,
-    fireRate = 0,
-    multiShot = 0,
-    speed = 0
+  state = {
+    credits = 0,
+    totalCreditsEarned = 0,
+    upgrades = {
+      damage = 0,
+      fireRate = 0,
+      multiShot = 0,
+      piercing = 0,
+      speed = 0
+    }
   }
-  Economy.save()
+  -- Also delete the save file to prevent reloading
+  if love.filesystem.getInfo("economy") then
+    love.filesystem.remove("economy")
+  end
 end
 
 -- Debug function to add credits (remove in production)

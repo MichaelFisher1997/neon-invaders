@@ -33,4 +33,14 @@ function Highscores.list()
   return data.highScores
 end
 
+-- Force reset highscores to defaults (used by settings clear data)
+function Highscores.reset()
+  cache = nil
+  -- Also delete the save file to prevent reloading
+  local Save = require("src.systems.save")
+  if love.filesystem.getInfo(FILENAME) then
+    love.filesystem.remove(FILENAME)
+  end
+end
+
 return Highscores

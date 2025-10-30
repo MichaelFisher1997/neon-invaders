@@ -24,7 +24,7 @@ function UpgradeMenu.init()
   state.backButtonHovered = false
   
   -- Get upgrade list in consistent order
-  local order = {"damage", "fireRate", "multiShot", "speed"}
+  local order = {"damage", "fireRate", "multiShot", "piercing", "speed"}
   for _, upgradeType in ipairs(order) do
     table.insert(state.upgradeList, upgradeType)
   end

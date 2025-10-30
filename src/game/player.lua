@@ -139,14 +139,8 @@ function Player.draw()
     if blink == 1 then return end
   end
   love.graphics.setColor(color[1], color[2], color[3], a)
-  -- Simple ship: triangle
-  local halfW = Player.width / 2
-  local h = Player.height
-  love.graphics.polygon("fill",
-    Player.x, Player.y - h/2,
-    Player.x - halfW, Player.y + h/2,
-    Player.x + halfW, Player.y + h/2
-  )
+  -- Draw ship using cosmetics system
+  Cosmetics.drawShip(Player.x, Player.y, Player.width, Player.height)
 end
 
 --- Get player's axis-aligned bounding box

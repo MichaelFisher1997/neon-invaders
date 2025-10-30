@@ -1,199 +1,494 @@
 local Cosmetics = require("src.systems.cosmetics")
+local Economy = require("src.systems.economy")
+local Constants = require("src.config.constants")
 local audio = require("src.audio.audio")
 
 local UICosmetics = {}
 
-local selection = 1 -- 1..#items
-local swipe = { startX = nil, startY = nil, tracking = false }
+-- State management
+local state = {
+  tab = "colors", -- "colors" or "shapes"
+  colorSelection = 1,
+  shapeSelection = 1,
+  colorScroll = 0,
+  shapeScroll = 0,
+  message = "",
+  messageTimer = 0
+}
 
--- local helper for dynamic RGB preview
+-- Dynamic RGB preview (faster!)
 local function rgbTripColor(time)
-  local t = time * 0.6
+  local t = time * 2.5
   local r = 0.5 + 0.5 * math.sin(t)
-  local g = 0.5 + 0.5 * math.sin(t + 2.0944) -- +120°
-  local b = 0.5 + 0.5 * math.sin(t + 4.1888) -- +240°
+  local g = 0.5 + 0.5 * math.sin(t + 2.0944)
+  local b = 0.5 + 0.5 * math.sin(t + 4.1888)
   return { r, g, b, 1.0 }
 end
 
-local function items()
-  return Cosmetics.all()
+local function showMessage(text)
+  state.message = text
+  state.messageTimer = 2.0
 end
 
-local function findIndexById(id)
-  local list = items()
-  for i, c in ipairs(list) do if c.id == id then return i end end
-  return 1
+local function getColors()
+  local colors = {}
+  for id, color in pairs(Constants.ECONOMY.cosmetics.colors) do
+    color.id = id
+    table.insert(colors, color)
+  end
+  return colors
 end
 
-local function layout(vw, vh)
-  local cardW = math.min(560, math.floor(vw * 0.78))
-  local cardH = math.min(220, math.floor(vh * 0.44))
-  local cardX = math.floor((vw - cardW) / 2)
-  local cardY = math.floor(vh * 0.34)
-  local arrowSize = 56
-  local backW, backH = 160, 44
-  local backX = math.floor((vw - backW) / 2)
-  local backY = math.floor(vh * 0.82)
-  local leftX = math.max(8, cardX - arrowSize - 18)
-  local rightX = math.min(vw - arrowSize - 8, cardX + cardW + 18)
-  local leftRect = { x = leftX, y = cardY + cardH/2 - arrowSize/2, w = arrowSize, h = arrowSize }
-  local rightRect = { x = rightX, y = leftRect.y, w = arrowSize, h = arrowSize }
-  local cardRect = { x = cardX, y = cardY, w = cardW, h = cardH }
-  local backRect = { x = backX, y = backY, w = backW, h = backH }
-  return cardRect, leftRect, rightRect, backRect
+local function getShapes()
+  local shapes = {}
+  for id, shape in pairs(Constants.ECONOMY.cosmetics.shapes) do
+    shape.id = id
+    table.insert(shapes, shape)
+  end
+  return shapes
+end
+
+local function getLayout(vw, vh)
+  local tabButtonsY = 80
+  local tabButtonW = 120
+  local tabButtonH = 40
+  local colorsTabX = vw/2 - tabButtonW - 10
+  local shapesTabX = vw/2 + 10
+  
+  local itemStartY = 140
+  local itemHeight = 70
+  local itemSpacing = 10
+  local itemWidth = math.min(450, vw * 0.8)
+  local itemX = (vw - itemWidth) / 2
+  
+  -- Show only 5 items at once
+  local visibleItems = 5
+  local listHeight = visibleItems * itemHeight + (visibleItems - 1) * itemSpacing
+  
+  local backW, backH = 120, 40
+  local backX = (vw - backW) / 2
+  local backY = vh - 80
+  
+  return {
+    tabButtons = {
+      colors = { x = colorsTabX, y = tabButtonsY, w = tabButtonW, h = tabButtonH },
+      shapes = { x = shapesTabX, y = tabButtonsY, w = tabButtonW, h = tabButtonH }
+    },
+    items = {
+      startY = itemStartY,
+      height = itemHeight,
+      spacing = itemSpacing,
+      width = itemWidth,
+      x = itemX,
+      visibleCount = visibleItems,
+      listHeight = listHeight
+    },
+    back = { x = backX, y = backY, w = backW, h = backH }
+  }
+end
+
+local function drawColorItem(layout, item, index, isSelected, displayIndex)
+  local y = layout.items.startY + (displayIndex - 1) * (layout.items.height + layout.items.spacing)
+  local rect = { x = layout.items.x, y = y, w = layout.items.width, h = layout.items.height }
+  
+  local isUnlocked = Cosmetics.isColorUnlocked(item.id)
+  local isSelectedColor = Cosmetics.getSelectedColor() == item.id
+  
+  -- Background
+  if isSelected then
+    love.graphics.setColor(0.3, 0.5, 0.9, 0.8)
+  else
+    love.graphics.setColor(0.1, 0.2, 0.4, 0.6)
+  end
+  love.graphics.rectangle("fill", rect.x, rect.y, rect.w, rect.h, 8, 8)
+  
+  -- Border
+  love.graphics.setColor(0.5, 0.7, 1.0, 1.0)
+  love.graphics.rectangle("line", rect.x, rect.y, rect.w, rect.h, 8, 8)
+  
+  -- Color preview
+  local previewColor
+  if item.id == 'rgb_trip' then
+    previewColor = rgbTripColor(love.timer.getTime())
+  else
+    previewColor = item.color or {1,1,1,1}
+  end
+  love.graphics.setColor(previewColor)
+  love.graphics.circle("fill", rect.x + 30, rect.y + rect.h/2, 15)
+  
+  -- Text
+  love.graphics.setColor(1, 1, 1, 1)
+  love.graphics.setFont(love.graphics.newFont(18))
+  love.graphics.print(item.name, rect.x + 60, rect.y + 10)
+  
+  love.graphics.setFont(love.graphics.newFont(14))
+  love.graphics.setColor(0.8, 0.8, 0.8, 1)
+  love.graphics.print(item.description, rect.x + 60, rect.y + 35)
+  
+  -- Status
+  if isUnlocked then
+    if isSelectedColor then
+      love.graphics.setColor(0.5, 1.0, 0.5, 1)
+      love.graphics.printf("EQUIPPED", 0, rect.y + 15, rect.x + rect.w - 10, "right")
+    else
+      love.graphics.setColor(0.8, 0.8, 0.8, 1)
+      love.graphics.printf("OWNED", 0, rect.y + 15, rect.x + rect.w - 10, "right")
+    end
+  else
+    love.graphics.setColor(1.0, 1.0, 0.5, 1)
+    love.graphics.printf(item.cost .. " credits", 0, rect.y + 15, rect.x + rect.w - 10, "right")
+  end
+end
+
+local function drawShapeItem(layout, item, index, isSelected, displayIndex)
+  local y = layout.items.startY + (displayIndex - 1) * (layout.items.height + layout.items.spacing)
+  local rect = { x = layout.items.x, y = y, w = layout.items.width, h = layout.items.height }
+  
+  local isUnlocked = Cosmetics.isShapeUnlocked(item.id)
+  local isSelectedShape = Cosmetics.getSelectedShape() == item.id
+  
+  -- Background
+  if isSelected then
+    love.graphics.setColor(0.3, 0.5, 0.9, 0.8)
+  else
+    love.graphics.setColor(0.1, 0.2, 0.4, 0.6)
+  end
+  love.graphics.rectangle("fill", rect.x, rect.y, rect.w, rect.h, 8, 8)
+  
+  -- Border
+  love.graphics.setColor(0.5, 0.7, 1.0, 1.0)
+  love.graphics.rectangle("line", rect.x, rect.y, rect.w, rect.h, 8, 8)
+  
+  -- Shape preview (use current color, larger size for better visibility)
+  love.graphics.setColor(Cosmetics.getColor())
+  Cosmetics.drawSpecificShape(item.id, rect.x + 50, rect.y + rect.h/2, 40, 40)
+  
+  -- Text
+  love.graphics.setColor(1, 1, 1, 1)
+  love.graphics.setFont(love.graphics.newFont(18))
+  love.graphics.print(item.name, rect.x + 90, rect.y + 12)
+  
+  love.graphics.setFont(love.graphics.newFont(14))
+  love.graphics.setColor(0.8, 0.8, 0.8, 1)
+  love.graphics.print(item.description, rect.x + 90, rect.y + 35)
+  
+  -- Status
+  if isUnlocked then
+    if isSelectedShape then
+      love.graphics.setColor(0.5, 1.0, 0.5, 1)
+      love.graphics.printf("EQUIPPED", 0, rect.y + 20, rect.x + rect.w - 15, "right")
+    else
+      love.graphics.setColor(0.8, 0.8, 0.8, 1)
+      love.graphics.printf("OWNED", 0, rect.y + 20, rect.x + rect.w - 15, "right")
+    end
+  else
+    love.graphics.setColor(1.0, 1.0, 0.5, 1)
+    love.graphics.printf(item.cost .. " credits", 0, rect.y + 20, rect.x + rect.w - 15, "right")
+  end
 end
 
 function UICosmetics.enter()
-  local selId = Cosmetics.getSelected()
-  selection = findIndexById(selId)
-  swipe = { startX = nil, startY = nil, tracking = false }
+  -- Reset to first items when entering
+  state.colorSelection = 1
+  state.shapeSelection = 1
+  state.colorScroll = 0
+  state.shapeScroll = 0
+  state.message = ""
+  state.messageTimer = 0
 end
 
 function UICosmetics.update(dt)
-  -- no-op
-end
-
-local function drawCard(r, cosmetic)
-  local unlocked = Cosmetics.isUnlocked(cosmetic.id)
-  -- card background
-  love.graphics.setColor(1,1,1,1)
-  love.graphics.rectangle('line', r.x, r.y, r.w, r.h, 12, 12)
-  love.graphics.setColor(0.153, 0.953, 1.0, 0.18)
-  love.graphics.rectangle('fill', r.x, r.y, r.w, r.h, 12, 12)
-
-  -- preview ship
-  local cx = r.x + 28
-  local cy = r.y + r.h/2
-  local color
-  if cosmetic.id == 'rgb_trip' then
-    color = rgbTripColor(love.timer.getTime())
-  else
-    color = cosmetic.color or {1,1,1,1}
+  -- Update message timer
+  if state.messageTimer > 0 then
+    state.messageTimer = state.messageTimer - dt
+    if state.messageTimer <= 0 then
+      state.message = ""
+    end
   end
-  love.graphics.setColor(color)
-  local tw = 48
-  love.graphics.polygon('fill', cx + 24, cy - 18, cx + 24 - tw/2, cy + 18, cx + 24 + tw/2, cy + 18)
-
-  -- text
-  local curId = Cosmetics.getSelected()
-  local status
-  if unlocked then
-    if curId == cosmetic.id then status = "Unlocked • Selected" else status = "Unlocked" end
-  else
-    status = string.format("Locked • Needs %d", cosmetic.threshold or 0)
-  end
-
-  love.graphics.setColor(1,1,1,1)
-  love.graphics.setFont(love.graphics.newFont(26))
-  love.graphics.print(cosmetic.name or cosmetic.id, r.x + 110, r.y + 28)
-  love.graphics.setFont(love.graphics.newFont(18))
-  love.graphics.setColor(unlocked and {0.7,1,0.9,1} or {1,0.6,0.6,1})
-  love.graphics.print(status, r.x + 110, r.y + 64)
 end
 
 function UICosmetics.draw(vw, vh)
-  love.graphics.setColor(1,1,1,1)
+  local layout = getLayout(vw, vh)
+  
+  -- Title
+  love.graphics.setColor(1, 1, 1, 1)
   love.graphics.setFont(love.graphics.newFont(36))
-  love.graphics.printf("Cosmetics", 0, vh * 0.18, vw, 'center')
-
-  local list = items()
-  local cardRect, leftRect, rightRect, backRect = layout(vw, vh)
-  drawCard(cardRect, list[selection])
-
-  -- arrows
-  love.graphics.setColor(1,1,1,1)
-  love.graphics.rectangle('line', leftRect.x, leftRect.y, leftRect.w, leftRect.h, 8, 8)
-  love.graphics.rectangle('line', rightRect.x, rightRect.y, rightRect.w, rightRect.h, 8, 8)
-  love.graphics.setFont(love.graphics.newFont(28))
-  love.graphics.printf('<', leftRect.x, leftRect.y + leftRect.h/2 - 18, leftRect.w, 'center')
-  love.graphics.printf('>', rightRect.x, rightRect.y + rightRect.h/2 - 18, rightRect.w, 'center')
-
-  -- back button
-  love.graphics.setColor(1,1,1,1)
-  love.graphics.setFont(love.graphics.newFont(22))
-  love.graphics.rectangle('line', backRect.x, backRect.y, backRect.w, backRect.h, 8, 8)
-  love.graphics.printf("Back", backRect.x, backRect.y + backRect.h/2 - 12, backRect.w, 'center')
-
-  -- page indicator
+  love.graphics.printf("Cosmetics Shop", 0, 30, vw, "center")
+  
+  -- Credits display
+  love.graphics.setFont(love.graphics.newFont(20))
+  love.graphics.printf("Credits: " .. Economy.getCredits(), 0, 60, vw, "center")
+  
+  -- Tab buttons
+  local colorsTab = layout.tabButtons.colors
+  local shapesTab = layout.tabButtons.shapes
+  
+  -- Colors tab
+  if state.tab == "colors" then
+    love.graphics.setColor(0.3, 0.5, 0.9, 0.9)
+  else
+    love.graphics.setColor(0.2, 0.4, 0.8, 0.7)
+  end
+  love.graphics.rectangle("fill", colorsTab.x, colorsTab.y, colorsTab.w, colorsTab.h, 6, 6)
+  love.graphics.setColor(0.5, 0.7, 1.0, 1.0)
+  love.graphics.rectangle("line", colorsTab.x, colorsTab.y, colorsTab.w, colorsTab.h, 6, 6)
+  love.graphics.setColor(1, 1, 1, 1)
+  love.graphics.setFont(love.graphics.newFont(18))
+  love.graphics.printf("Colors", colorsTab.x, colorsTab.y + 10, colorsTab.w, "center")
+  
+  -- Shapes tab
+  if state.tab == "shapes" then
+    love.graphics.setColor(0.3, 0.5, 0.9, 0.9)
+  else
+    love.graphics.setColor(0.2, 0.4, 0.8, 0.7)
+  end
+  love.graphics.rectangle("fill", shapesTab.x, shapesTab.y, shapesTab.w, shapesTab.h, 6, 6)
+  love.graphics.setColor(0.5, 0.7, 1.0, 1.0)
+  love.graphics.rectangle("line", shapesTab.x, shapesTab.y, shapesTab.w, shapesTab.h, 6, 6)
+  love.graphics.setColor(1, 1, 1, 1)
+  love.graphics.setFont(love.graphics.newFont(18))
+  love.graphics.printf("Shapes", shapesTab.x, shapesTab.y + 10, shapesTab.w, "center")
+  
+  -- Draw items based on current tab (with scrolling)
+  if state.tab == "colors" then
+    local colors = getColors()
+    local startIndex = state.colorScroll + 1
+    local endIndex = math.min(startIndex + layout.items.visibleCount - 1, #colors)
+    
+    for displayIndex = startIndex, endIndex do
+      local actualIndex = displayIndex
+      local isSelected = (actualIndex == state.colorSelection)
+      local displayPos = displayIndex - startIndex + 1
+      drawColorItem(layout, colors[actualIndex], actualIndex, isSelected, displayPos)
+    end
+    
+    -- Scroll indicators
+    if #colors > layout.items.visibleCount then
+      love.graphics.setColor(0.7, 0.7, 0.7, 0.7)
+      love.graphics.setFont(love.graphics.newFont(14))
+      if state.colorScroll > 0 then
+        love.graphics.printf("▲", layout.items.x + layout.items.width/2 - 10, layout.items.startY - 20, 20, "center")
+      end
+      if endIndex < #colors then
+        love.graphics.printf("▼", layout.items.x + layout.items.width/2 - 10, layout.items.startY + layout.items.listHeight + 5, 20, "center")
+      end
+    end
+  else
+    local shapes = getShapes()
+    local startIndex = state.shapeScroll + 1
+    local endIndex = math.min(startIndex + layout.items.visibleCount - 1, #shapes)
+    
+    for displayIndex = startIndex, endIndex do
+      local actualIndex = displayIndex
+      local isSelected = (actualIndex == state.shapeSelection)
+      local displayPos = displayIndex - startIndex + 1
+      drawShapeItem(layout, shapes[actualIndex], actualIndex, isSelected, displayPos)
+    end
+    
+    -- Scroll indicators
+    if #shapes > layout.items.visibleCount then
+      love.graphics.setColor(0.7, 0.7, 0.7, 0.7)
+      love.graphics.setFont(love.graphics.newFont(14))
+      if state.shapeScroll > 0 then
+        love.graphics.printf("▲", layout.items.x + layout.items.width/2 - 10, layout.items.startY - 20, 20, "center")
+      end
+      if endIndex < #shapes then
+        love.graphics.printf("▼", layout.items.x + layout.items.width/2 - 10, layout.items.startY + layout.items.listHeight + 5, 20, "center")
+      end
+    end
+  end
+  
+  -- Back button
+  local back = layout.back
+  love.graphics.setColor(0.2, 0.4, 0.8, 0.8)
+  love.graphics.rectangle("fill", back.x, back.y, back.w, back.h, 6, 6)
+  love.graphics.setColor(0.5, 0.7, 1.0, 1.0)
+  love.graphics.rectangle("line", back.x, back.y, back.w, back.h, 6, 6)
+  love.graphics.setColor(1, 1, 1, 1)
+  love.graphics.setFont(love.graphics.newFont(18))
+  love.graphics.printf("Back", back.x, back.y + 10, back.w, "center")
+  
+  -- Instructions
   love.graphics.setFont(love.graphics.newFont(14))
-  love.graphics.setColor(1,1,1,0.7)
-  love.graphics.printf(string.format("%d / %d", selection, #list), 0, backRect.y - 26, vw, 'center')
-
-  -- hint
-  love.graphics.setColor(1,1,1,0.7)
-  love.graphics.printf("Swipe or use < / > to browse. Tap card or press Enter to select.", 0, vh*0.90, vw, 'center')
-end
-
-local function nextItem()
-  local n = #items()
-  selection = (selection % n) + 1
-end
-
-local function prevItem()
-  local n = #items()
-  selection = (selection - 2 + n) % n + 1
+  love.graphics.setColor(0.7, 0.7, 0.7, 1)
+  love.graphics.printf("Use ↑↓ to select, ENTER to purchase/equip, TAB to switch tabs, ESC to go back", 
+                      0, vh - 30, vw, "center")
+  
+  -- Message display
+  if state.messageTimer > 0 then
+    local alpha = math.min(1.0, state.messageTimer)
+    love.graphics.setColor(1.0, 1.0, 0.5, alpha)
+    love.graphics.setFont(love.graphics.newFont(20))
+    love.graphics.printf(state.message, 0, vh/2 - 20, vw, "center")
+  end
 end
 
 function UICosmetics.keypressed(key)
-  if key == 'left' or key == 'a' then
-    prevItem(); audio.play('ui_click')
-  elseif key == 'right' or key == 'd' then
-    nextItem(); audio.play('ui_click')
+  if key == 'tab' then
+    state.tab = (state.tab == "colors") and "shapes" or "colors"
+    audio.play('ui_click')
+  elseif key == 'up' then
+    if state.tab == "colors" then
+      state.colorSelection = math.max(1, state.colorSelection - 1)
+      -- Auto-scroll up if selection goes above visible area
+      if state.colorSelection < state.colorScroll + 1 then
+        state.colorScroll = math.max(0, state.colorSelection - 1)
+      end
+    else
+      state.shapeSelection = math.max(1, state.shapeSelection - 1)
+      -- Auto-scroll up if selection goes above visible area
+      if state.shapeSelection < state.shapeScroll + 1 then
+        state.shapeScroll = math.max(0, state.shapeSelection - 1)
+      end
+    end
+    audio.play('ui_click')
+  elseif key == 'down' then
+    if state.tab == "colors" then
+      local colors = getColors()
+      state.colorSelection = math.min(#colors, state.colorSelection + 1)
+      -- Auto-scroll down if selection goes below visible area
+      local layout = getLayout(love.graphics.getWidth(), love.graphics.getHeight())
+      if state.colorSelection > state.colorScroll + layout.items.visibleCount then
+        state.colorScroll = math.min(#colors - layout.items.visibleCount, state.colorSelection - layout.items.visibleCount)
+      end
+    else
+      local shapes = getShapes()
+      state.shapeSelection = math.min(#shapes, state.shapeSelection + 1)
+      -- Auto-scroll down if selection goes below visible area
+      local layout = getLayout(love.graphics.getWidth(), love.graphics.getHeight())
+      if state.shapeSelection > state.shapeScroll + layout.items.visibleCount then
+        state.shapeScroll = math.min(#shapes - layout.items.visibleCount, state.shapeSelection - layout.items.visibleCount)
+      end
+    end
+    audio.play('ui_click')
   elseif key == 'escape' then
-    audio.play('ui_click'); return 'back'
+    audio.play('ui_click')
+    return 'back'
   elseif key == 'return' or key == 'enter' or key == 'space' then
     audio.play('ui_click')
-    local cosmetic = items()[selection]
-    if Cosmetics.isUnlocked(cosmetic.id) then
-      Cosmetics.select(cosmetic.id)
+    if state.tab == "colors" then
+      local colors = getColors()
+      local color = colors[state.colorSelection]
+      if Cosmetics.isColorUnlocked(color.id) then
+        Cosmetics.selectColor(color.id)
+        showMessage("Color equipped!")
+      else
+        local success, message = Cosmetics.purchaseColor(color.id)
+        showMessage(message)
+        if not success then
+          audio.play('hit')
+        end
+      end
     else
-      audio.play('hit')
+      local shapes = getShapes()
+      local shape = shapes[state.shapeSelection]
+      if Cosmetics.isShapeUnlocked(shape.id) then
+        Cosmetics.selectShape(shape.id)
+        showMessage("Shape equipped!")
+      else
+        local success, message = Cosmetics.purchaseShape(shape.id)
+        showMessage(message)
+        if not success then
+          audio.play('hit')
+        end
+      end
     end
   end
   return nil
 end
 
 function UICosmetics.pointerPressed(vw, vh, lx, ly)
-  local cardRect, leftRect, rightRect, backRect = layout(vw, vh)
-  swipe = { startX = lx, startY = ly, tracking = true }
-  -- arrows
-  if lx >= leftRect.x and lx <= leftRect.x + leftRect.w and ly >= leftRect.y and ly <= leftRect.y + leftRect.h then
-    prevItem(); audio.play('ui_click'); return nil
+  local layout = getLayout(vw, vh)
+  
+  -- Check tab buttons
+  if lx >= layout.tabButtons.colors.x and lx <= layout.tabButtons.colors.x + layout.tabButtons.colors.w and
+     ly >= layout.tabButtons.colors.y and ly <= layout.tabButtons.colors.y + layout.tabButtons.colors.h then
+    state.tab = "colors"
+    audio.play('ui_click')
+    return nil
   end
-  if lx >= rightRect.x and lx <= rightRect.x + rightRect.w and ly >= rightRect.y and ly <= rightRect.y + rightRect.h then
-    nextItem(); audio.play('ui_click'); return nil
+  
+  if lx >= layout.tabButtons.shapes.x and lx <= layout.tabButtons.shapes.x + layout.tabButtons.shapes.w and
+     ly >= layout.tabButtons.shapes.y and ly <= layout.tabButtons.shapes.y + layout.tabButtons.shapes.h then
+    state.tab = "shapes"
+    audio.play('ui_click')
+    return nil
   end
-  -- back
-  if lx >= backRect.x and lx <= backRect.x + backRect.w and ly >= backRect.y and ly <= backRect.y + backRect.h then
-    audio.play('ui_click'); return 'back'
+  
+  -- Check back button
+  if lx >= layout.back.x and lx <= layout.back.x + layout.back.w and
+     ly >= layout.back.y and ly <= layout.back.y + layout.back.h then
+    audio.play('ui_click')
+    return 'back'
   end
-  -- tap card selects
-  if lx >= cardRect.x and lx <= cardRect.x + cardRect.w and ly >= cardRect.y and ly <= cardRect.y + cardRect.h then
-    local cosmetic = items()[selection]
-    if Cosmetics.isUnlocked(cosmetic.id) then
-      Cosmetics.select(cosmetic.id); audio.play('ui_click')
-    else
-      audio.play('hit')
+  
+  -- Check item clicks
+  if state.tab == "colors" then
+    local colors = getColors()
+    local startIndex = state.colorScroll + 1
+    local endIndex = math.min(startIndex + layout.items.visibleCount - 1, #colors)
+    
+    for displayIndex = startIndex, endIndex do
+      local actualIndex = displayIndex
+      local y = layout.items.startY + (displayIndex - startIndex) * (layout.items.height + layout.items.spacing)
+      if lx >= layout.items.x and lx <= layout.items.x + layout.items.width and
+         ly >= y and ly <= y + layout.items.height then
+        state.colorSelection = actualIndex
+        audio.play('ui_click')
+        
+        local color = colors[actualIndex]
+        if Cosmetics.isColorUnlocked(color.id) then
+          Cosmetics.selectColor(color.id)
+          showMessage("Color equipped!")
+        else
+          local success, message = Cosmetics.purchaseColor(color.id)
+          showMessage(message)
+          if not success then
+            audio.play('hit')
+          end
+        end
+        break
+      end
+    end
+  else
+    local shapes = getShapes()
+    local startIndex = state.shapeScroll + 1
+    local endIndex = math.min(startIndex + layout.items.visibleCount - 1, #shapes)
+    
+    for displayIndex = startIndex, endIndex do
+      local actualIndex = displayIndex
+      local y = layout.items.startY + (displayIndex - startIndex) * (layout.items.height + layout.items.spacing)
+      if lx >= layout.items.x and lx <= layout.items.x + layout.items.width and
+         ly >= y and ly <= y + layout.items.height then
+        state.shapeSelection = actualIndex
+        audio.play('ui_click')
+        
+        local shape = shapes[actualIndex]
+        if Cosmetics.isShapeUnlocked(shape.id) then
+          Cosmetics.selectShape(shape.id)
+          showMessage("Shape equipped!")
+        else
+          local success, message = Cosmetics.purchaseShape(shape.id)
+          showMessage(message)
+          if not success then
+            audio.play('hit')
+          end
+        end
+        break
+      end
     end
   end
+  
   return nil
 end
 
 function UICosmetics.pointerMoved(vw, vh, lx, ly)
-  if not swipe.tracking or not swipe.startX then return nil end
-  -- just track; decision on release
+  -- No swipe functionality needed for new layout
   return nil
 end
 
 function UICosmetics.pointerReleased(vw, vh, lx, ly)
-  if not swipe.tracking or not swipe.startX then return nil end
-  local dx = lx - swipe.startX
-  local dy = ly - swipe.startY
-  swipe = { startX = nil, startY = nil, tracking = false }
-  if math.abs(dx) > 40 and math.abs(dx) > math.abs(dy) then
-    if dx < 0 then nextItem() else prevItem() end
-    audio.play('ui_click')
-  end
+  -- No swipe functionality needed for new layout
   return nil
 end
 

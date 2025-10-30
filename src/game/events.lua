@@ -185,6 +185,15 @@ local function updateEvent(event, dt)
     if math.random() < dt * 0.2 then -- 20% chance per second
       Economy.addCredits(5) -- Small credit bonus
     end
+  elseif event.type == "alien_reinforcements" then
+    -- Spawn stronger alien reinforcements periodically
+    local Aliens = require("src.game.aliens")
+    if math.random() < dt * 1.5 then -- 1.5 reinforcements per second on average
+      -- Spawn elite aliens with higher stats
+      local eliteTypes = {"tank", "sniper"}
+      local eliteType = eliteTypes[math.random(#eliteTypes)]
+      Aliens.spawnReinforcement(eliteType)
+    end
   end
   
   return false

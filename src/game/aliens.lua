@@ -220,6 +220,8 @@ end
 
 function Aliens.checkBulletCollision(bullet)
   if bullet.from ~= 'player' then return false end
+  local Bullets = require("src.game.bullets")
+  
   for r = 1, formation.rows do
     for c = 1, formation.cols do
       local alien = formation.aliens[r][c]
@@ -234,6 +236,12 @@ function Aliens.checkBulletCollision(bullet)
         local dy = math.max(y - bullet.y, 0, bullet.y - (y + h))
         
         if dx*dx + dy*dy <= (bullet.radius * bullet.radius) then
+          -- Check if this bullet can pierce this alien
+          local alienId = tostring(r) .. "," .. tostring(c)
+          if bullet.piercing > 0 and not Bullets.canPierce(bullet, alienId) then
+            return false -- Bullet already hit this alien or exceeded pierce limit
+          end
+          
           -- Check for phasing
           if alien.isPhased and variant.behavior == "phase" then
             -- Ghost aliens have chance to phase through bullets
@@ -244,6 +252,9 @@ function Aliens.checkBulletCollision(bullet)
           
           -- Apply damage
           alien.health = alien.health - (bullet.damage or 1)
+          
+          -- Mark this alien as pierced by this bullet
+          Bullets.markPierced(bullet, alienId)
           
           if alien.health <= 0 then
             alien.alive = false
@@ -325,6 +336,47 @@ function Aliens.respawnFromConfig(cfg, playerY)
   formation.originY = math.floor(desiredOriginY + 0.5)
   formation.dir = (formation.dir == 0) and 1 or formation.dir -- ensure marching resumes after respawn
   resetAliens()
+end
+
+function Aliens.spawnReinforcement(variantType)
+  variantType = variantType or "basic"
+  
+  -- Find a valid spawn position at the top
+  local spawnRow = 1
+  local spawnCol = math.random(1, formation.cols)
+  
+  -- Check if position is available, if not try nearby columns
+  local attempts = 0
+  while attempts < formation.cols do
+    if not formation.aliens[spawnRow][spawnCol] or not formation.aliens[spawnRow][spawnCol].alive then
+      break
+    end
+    spawnCol = (spawnCol % formation.cols) + 1
+    attempts = attempts + 1
+  end
+  
+  if attempts < formation.cols then
+    local variant = Constants.ALIEN_VARIANTS[variantType]
+    local alien = {
+      alive = true,
+      x = (spawnCol-1)*formation.spacingX,
+      y = (spawnRow-1)*formation.spacingY,
+      w = ALIEN_W * variant.size,
+      h = ALIEN_H * variant.size,
+      variant = variantType,
+      health = variant.health * 1.5, -- Reinforcements are 50% tougher
+      maxHealth = variant.health * 1.5,
+      score = variant.score * 2, -- Double score for killing reinforcements
+      zigzagPhase = math.random() * math.pi * 2,
+      phaseTimer = 0,
+      xOffset = 0,
+      isPhased = false,
+      shootTimer = 0,
+      behavior = variant.behavior,
+      behaviorTimer = 0
+    }
+    formation.aliens[spawnRow][spawnCol] = alien
+  end
 end
 
 return Aliens
