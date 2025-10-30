@@ -69,23 +69,29 @@ function Game.update(dt, input)
   local bottom = Aliens.update(dt)
 
   -- Collisions: bullets vs aliens (and boss)
-  Bullets.eachActive(function(b)
-    if b.from == 'player' then
-      local got = Aliens.checkBulletCollision(b)
+  Bullets.eachActive(function(bullet)
+    if bullet.from == 'player' then
+      local got = Aliens.checkBulletCollision(bullet)
       local hitBoss = false
       if not got and Boss.exists() then
         local bx, by, bw, bh = Boss.aabb()
         if bx then
-          local dx = math.max(bx - b.x, 0, b.x - (bx + bw))
-          local dy = math.max(by - b.y, 0, b.y - (by + bh))
-          if dx*dx + dy*dy <= (b.radius*b.radius) then
+          local dx = math.max(bx - bullet.x, 0, bullet.x - (bx + bw))
+          local dy = math.max(by - bullet.y, 0, bullet.y - (by + bh))
+          if dx*dx + dy*dy <= (bullet.radius*bullet.radius) then
             hitBoss = true
-            if Boss.hit(b.damage or 1) then
+            if Boss.hit(bullet.damage or 1) then
               score = score + 250
+              -- Award health bonus for boss kill
+              Player.lives = math.min(Player.lives + 1, 5) -- Cap at 5 lives
               Particles.burst(bx + bw/2, by + bh/2, {1.0, 0.182, 0.651, 1.0}, 36, 280)
               Screenshake.add(0.22, 18)
+              -- Visual feedback for health bonus
+              Particles.burst(bx + bw/2, by + bh/2, {0.2, 1.0, 0.2, 1.0}, 20, 180) -- Green health burst
+              require('src.audio.audio').play('health_bonus')
+              Banner.trigger("BOSS DEFEATED! +1 LIFE")
             else
-              Particles.burst(b.x, b.y, {1.0, 1.0, 1.0, 1.0}, 12, 200)
+              Particles.burst(bullet.x, bullet.y, {1.0, 1.0, 1.0, 1.0}, 12, 200)
               Screenshake.add(0.06, 4)
             end
           end
@@ -93,11 +99,11 @@ function Game.update(dt, input)
       end
       if got then
         score = score + got
-        -- Only deactivate bullet if not piercing
-        if not b.piercing then
-          b.active = false
+        -- Only deactivate bullet if not piercing or has reached pierce limit
+        if bullet.piercing <= 0 or #bullet.enemiesPierced >= bullet.piercing then
+          bullet.active = false
         end
-        Particles.burst(b.x, b.y, {1.0, 0.182, 0.651, 1.0}, 10, 220) -- magenta burst
+        Particles.burst(bullet.x, bullet.y, {1.0, 0.182, 0.651, 1.0}, 10, 220) -- magenta burst
         Screenshake.add(0.08, 4)
         require('src.audio.audio').play('hit')
         -- Award credits for alien kill (got contains the score value)
@@ -114,15 +120,14 @@ function Game.update(dt, input)
         Economy.addCredits(credits)
       elseif hitBoss then
         -- Only deactivate bullet if not piercing
-        if not b.piercing then
-          b.active = false
+        if not bullet.piercing then
+          bullet.active = false
         end
       end
     end
   end)
 
-  -- Check cosmetic unlocks based on current score
-  Cosmetics.checkUnlocks(score)
+  -- Note: Cosmetics are unlocked via credits in the economy system, not score-based unlocks
 
   -- Enemy fire logic (difficulty-aware)
   local cfg = Waves.configFor(wave)
@@ -169,6 +174,61 @@ function Game.update(dt, input)
       end
     end
   end)
+
+  -- Check laser boss collision
+  if Boss.exists() then
+    local LaserBoss = require("src.game.boss.laser")
+    local laserData = LaserBoss.getLaserData and LaserBoss.getLaserData()
+    if laserData and laserData.state == "firing" and Player.isVulnerable() then
+      -- Check if player line intersects with laser
+      local playerCenterX = px + pw/2
+      local playerCenterY = py + ph/2
+      
+      -- Simple distance from line check
+      local lineStartX, lineStartY = laserData.x, laserData.y
+      local lineEndX = laserData.x + math.cos(laserData.laserAngle) * laserData.laserLength
+      local lineEndY = laserData.y + math.sin(laserData.laserAngle) * laserData.laserLength
+      
+      -- Calculate distance from point to line
+      local A = playerCenterX - lineStartX
+      local B = playerCenterY - lineStartY
+      local C = lineEndX - lineStartX
+      local D = lineEndY - lineStartY
+      
+      local dot = A * C + B * D
+      local lenSq = C * C + D * D
+      local param = -1
+      
+      if lenSq ~= 0 then
+        param = dot / lenSq
+      end
+      
+      local xx, yy
+      if param < 0 then
+        xx, yy = lineStartX, lineStartY
+      elseif param > 1 then
+        xx, yy = lineEndX, lineEndY
+      else
+        xx = lineStartX + param * C
+        yy = lineStartY + param * D
+      end
+      
+      local dx = playerCenterX - xx
+      local dy = playerCenterY - yy
+      local distance = math.sqrt(dx * dx + dy * dy)
+      
+      if distance < (laserData.laserWidth + math.max(pw, ph)/2) then
+        Player.lives = math.max(0, (Player.lives or 3) - 1)
+        Particles.burst(playerCenterX, playerCenterY, {0, 0.8, 1, 1.0}, 20, 300) -- cyan laser hit
+        Screenshake.add(0.3, 20)
+        Player.startRespawn()
+        if Player.lives <= 0 then
+          isGameOver = true
+        end
+        require('src.audio.audio').play('hit')
+      end
+    end
+  end
 
   -- Check event collisions with player
   local playerCenterX = px + pw/2
