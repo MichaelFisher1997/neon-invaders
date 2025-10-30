@@ -80,7 +80,7 @@ function UpgradeMenu.update(dt)
   local scaledY = mouseY / Scaling.getScale()
   
   local backButtonX = VIRTUAL_WIDTH / 2 - 60
-  local backButtonY = VIRTUAL_HEIGHT - 80
+  local backButtonY = VIRTUAL_HEIGHT - 60
   local backButtonW = 120
   local backButtonH = 50
   
@@ -253,7 +253,7 @@ function UpgradeMenu.draw()
   
   -- Back button with neon styling
   local backButtonX = VIRTUAL_WIDTH / 2 - 60
-  local backButtonY = VIRTUAL_HEIGHT - 80
+  local backButtonY = VIRTUAL_HEIGHT - 60
   local backButtonW = 120
   local backButtonH = 50
   
@@ -277,7 +277,7 @@ function UpgradeMenu.draw()
   love.graphics.setFont(love.graphics.newFont(12))
   love.graphics.setColor(0.5, 0.8, 1.0, 0.8)
   love.graphics.printf("↑↓ Select • ENTER/SPACE Purchase • ESC Back", 
-                        0, VIRTUAL_HEIGHT - 25, VIRTUAL_WIDTH, "center")
+                        0, VIRTUAL_HEIGHT - 10, VIRTUAL_WIDTH, "center")
   
   -- Message display with neon styling
   if state.messageTimer > 0 then
