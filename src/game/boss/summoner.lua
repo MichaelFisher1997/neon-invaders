@@ -64,6 +64,8 @@ function Summoner.update(dt)
     minion.time = minion.time + dt
     
     -- Remove minions that go off screen (explode at bottom)
+    local BossBase = require("src.game.boss.base")
+    local _, vh = BossBase.getVirtualSize()
     if minion.y > vh then
       -- Create explosion effect at bottom
       local Particles = require("src.fx.particles")
