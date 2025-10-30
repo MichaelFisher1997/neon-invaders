@@ -113,12 +113,22 @@ function BossGallery.spawnDemoBoss(index)
     local vw, vh = BossBase.getVirtualSize()
     data.x = vw / 2      -- Center horizontally
     data.y = 140         -- Position at top like in waves
-    data.speed = 0       -- Keep stationary for gallery
     
-    -- Special handling for Splitter boss - set health to trigger split after 5s
-    if info.module == "splitter" then
+    -- Special handling for different boss types in gallery
+    if info.module == "minesweeper" then
+      -- Minesweeper boss needs to move to show its behavior
+      data.speed = 180   -- Restore movement speed for visibility
+      data.baseSpeed = 180 -- Ensure phase movement works
+      -- Use the same starting position as in-game for proper mine placement
+      data.x = 50 -- Match sweepStartX for correct mine spacing
+      data.dir = 1
+    elseif info.module == "splitter" then
+      data.speed = 0       -- Keep stationary for other bosses
+      -- Special handling for Splitter boss - set health to trigger split after 5s
       data.gallerySplitTimer = 5.0 -- 5 seconds before auto-split
       data.galleryMode = true
+    else
+      data.speed = 0       -- Keep stationary for gallery
     end
   end
   
