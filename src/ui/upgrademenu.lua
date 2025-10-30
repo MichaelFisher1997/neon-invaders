@@ -89,9 +89,9 @@ function UpgradeMenu.update(dt)
   
   -- Handle mouse click for upgrades
   if love.mouse.isDown(1) then
-    local upgradeStartY = 130
-    local upgradeHeight = 120
-    local upgradeSpacing = 10
+    local upgradeStartY = 120
+    local upgradeHeight = 100
+    local upgradeSpacing = 5
     
     for i, upgradeType in ipairs(state.upgradeList) do
       local upgradeY = upgradeStartY + (i - 1) * (upgradeHeight + upgradeSpacing)
@@ -132,26 +132,26 @@ function UpgradeMenu.draw()
   
   -- Title with neon glow
   love.graphics.setColor(0.153, 0.953, 1.0, 1.0)
-  love.graphics.setFont(love.graphics.newFont(48))
+  love.graphics.setFont(love.graphics.newFont(40))
   local title = "UPGRADES"
   local tw = love.graphics.getFont():getWidth(title)
   love.graphics.print(title, (VIRTUAL_WIDTH - tw) / 2, 30)
   
   -- Glow effect for title
   love.graphics.setColor(0.153, 0.953, 1.0, 0.3)
-  love.graphics.setFont(love.graphics.newFont(48))
+  love.graphics.setFont(love.graphics.newFont(40))
   love.graphics.print(title, (VIRTUAL_WIDTH - tw) / 2 + 2, 32)
   
   -- Credits display with neon styling
   local credits = Economy.getCredits()
   love.graphics.setColor(0.5, 1.0, 0.5, 1.0)
-  love.graphics.setFont(love.graphics.newFont(24))
+  love.graphics.setFont(love.graphics.newFont(20))
   love.graphics.printf("CREDITS: " .. credits, 0, 80, VIRTUAL_WIDTH, "center")
   
   -- Upgrade list with enhanced styling
-  local upgradeStartY = 130
-  local upgradeHeight = 120
-  local upgradeSpacing = 10
+  local upgradeStartY = 120
+  local upgradeHeight = 100
+  local upgradeSpacing = 5
   local upgradeInfo = Economy.getUpgradeInfo()
   local upgradeColors = {
     speed = {0.0, 1.0, 1.0},      -- Cyan
@@ -201,13 +201,13 @@ function UpgradeMenu.draw()
     
     -- Upgrade name with color accent
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.setFont(love.graphics.newFont(28))
-    love.graphics.print(info.name, cardX + 70, upgradeY + 20)
+    love.graphics.setFont(love.graphics.newFont(24))
+    love.graphics.print(info.name, cardX + 70, upgradeY + 15)
     
     -- Level progress bar
     local levelRatio = info.currentLevel / info.maxLevel
     local barX = cardX + 70
-    local barY = upgradeY + 55
+    local barY = upgradeY + 45
     local barW = 200
     local barH = 8
     
@@ -221,39 +221,39 @@ function UpgradeMenu.draw()
     
     -- Level text
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.setFont(love.graphics.newFont(16))
+    love.graphics.setFont(love.graphics.newFont(14))
     love.graphics.printf("Level " .. info.currentLevel .. "/" .. info.maxLevel, barX + barW + 10, barY, 100, "left")
     
     -- Description
     love.graphics.setColor(0.9, 0.9, 0.9, 1)
-    love.graphics.setFont(love.graphics.newFont(16))
-    love.graphics.printf(info.description, cardX + 70, upgradeY + 85, cardW - 100, "left")
+    love.graphics.setFont(love.graphics.newFont(14))
+    love.graphics.printf(info.description, cardX + 70, upgradeY + 65, cardW - 100, "left")
     
     -- Cost section
     local costX = cardX + cardW - 150
-    local costY = upgradeY + 25
+    local costY = upgradeY + 15
     if info.currentLevel >= info.maxLevel then
       love.graphics.setColor(0.5, 1.0, 0.5, 1)
-      love.graphics.setFont(love.graphics.newFont(20))
+      love.graphics.setFont(love.graphics.newFont(18))
       love.graphics.printf("MAXED", costX, costY, 120, "center")
     elseif info.canPurchase then
       love.graphics.setColor(1.0, 1.0, 0.5, 1)
-      love.graphics.setFont(love.graphics.newFont(16))
+      love.graphics.setFont(love.graphics.newFont(14))
       love.graphics.printf("Cost:", costX, costY, 120, "center")
-      love.graphics.setFont(love.graphics.newFont(20))
-      love.graphics.printf(info.cost, costX, costY + 25, 120, "center")
+      love.graphics.setFont(love.graphics.newFont(18))
+      love.graphics.printf(info.cost, costX, costY + 20, 120, "center")
     else
       love.graphics.setColor(1.0, 0.5, 0.5, 1)
-      love.graphics.setFont(love.graphics.newFont(16))
-      love.graphics.printf("Insufficient", costX, costY, 120, "center")
       love.graphics.setFont(love.graphics.newFont(14))
-      love.graphics.printf("Credits", costX, costY + 25, 120, "center")
+      love.graphics.printf("Insufficient", costX, costY, 120, "center")
+      love.graphics.setFont(love.graphics.newFont(12))
+      love.graphics.printf("Credits", costX, costY + 20, 120, "center")
     end
   end
   
   -- Back button with neon styling
   local backButtonX = VIRTUAL_WIDTH / 2 - 60
-  local backButtonY = VIRTUAL_HEIGHT - 140
+  local backButtonY = VIRTUAL_HEIGHT - 120
   local backButtonW = 120
   local backButtonH = 50
   
@@ -270,25 +270,25 @@ function UpgradeMenu.draw()
   love.graphics.setLineWidth(1)
   
   love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.setFont(love.graphics.newFont(24))
+  love.graphics.setFont(love.graphics.newFont(20))
   love.graphics.printf("BACK", backButtonX, backButtonY + 15, backButtonW, "center")
   
   -- Instructions with better styling
-  love.graphics.setFont(love.graphics.newFont(14))
+  love.graphics.setFont(love.graphics.newFont(12))
   love.graphics.setColor(0.5, 0.8, 1.0, 0.8)
   love.graphics.printf("↑↓ Select • ENTER/SPACE Purchase • ESC Back", 
-                        0, VIRTUAL_HEIGHT - 60, VIRTUAL_WIDTH, "center")
+                        0, VIRTUAL_HEIGHT - 50, VIRTUAL_WIDTH, "center")
   
   -- Message display with neon styling
   if state.messageTimer > 0 then
     local alpha = math.min(1.0, state.messageTimer / 0.5) * 0.9
     love.graphics.setColor(1.0, 0.8, 0.2, alpha)
-    love.graphics.setFont(love.graphics.newFont(24))
+    love.graphics.setFont(love.graphics.newFont(20))
     love.graphics.printf(state.message, 0, VIRTUAL_HEIGHT / 2 - 20, VIRTUAL_WIDTH, "center")
     
     -- Glow effect
     love.graphics.setColor(1.0, 0.8, 0.2, alpha * 0.3)
-    love.graphics.setFont(love.graphics.newFont(24))
+    love.graphics.setFont(love.graphics.newFont(20))
     love.graphics.printf(state.message, 0, VIRTUAL_HEIGHT / 2 - 20 + 2, VIRTUAL_WIDTH, "center")
   end
 end
