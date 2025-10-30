@@ -12,9 +12,9 @@ function Shield.spawnFromConfig(cfg, vw, vh)
   data.shieldHealth = {100, 100, 100} -- 3 shield segments
   data.shieldMaxHealth = {100, 100, 100}
   data.shieldPositions = {
-    {x = -40, y = -20}, 
-    {x = 0, y = -25}, 
-    {x = 40, y = -20}
+    {x = -60, y = -40}, 
+    {x = 0, y = -45}, 
+    {x = 60, y = -40}
   }
   data.shieldsDown = false
   
@@ -81,14 +81,14 @@ function Shield.draw()
     local shieldY = data.y + shieldData.y
     
     if data.shieldHealth[i] > 0 then
-      -- Draw shield (glowing cyan)
+      -- Draw shield (glowing cyan) - 3x larger
       love.graphics.setColor(0, 1, 1, 0.8)
-      love.graphics.rectangle('fill', shieldX - 25, shieldY - 15, 50, 30, 5, 5)
+      love.graphics.rectangle('fill', shieldX - 75, shieldY - 45, 150, 90, 8, 8)
       
       -- Shield health indicator
       local shieldRatio = data.shieldHealth[i] / data.shieldMaxHealth[i]
       love.graphics.setColor(0, 0.8, 0.8, 1)
-      love.graphics.rectangle('fill', shieldX - 20, shieldY + 20, 40 * shieldRatio, 4)
+      love.graphics.rectangle('fill', shieldX - 60, shieldY + 60, 120 * shieldRatio, 6)
     end
   end
   
