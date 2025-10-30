@@ -129,47 +129,47 @@ Constants.ECONOMY = {
   bossKillBonus = 1000, -- 10x bonus for killing boss (was 100)
   specialAlienBonus = 25, -- Bonus for killing special aliens
   
-  -- Upgrade costs and effects
+  -- Upgrade costs and effects (ordered by accessibility)
   upgrades = {
+    speed = {
+      name = "Ship Speed",
+      baseCost = 200,
+      costMultiplier = 4.0,
+      maxLevel = 6,
+      effectPerLevel = 0.15, -- +15% speed per level
+      description = "Increases ship movement speed by 15% per level"
+    },
     damage = {
       name = "Damage",
-      baseCost = 150,
-      costMultiplier = 3.5,
+      baseCost = 300,
+      costMultiplier = 4.5,
       maxLevel = 10,
       effectPerLevel = 0.25, -- +25% damage per level
       description = "Increases bullet damage by 25% per level"
     },
     fireRate = {
       name = "Fire Rate",
-      baseCost = 200,
-      costMultiplier = 4.0,
+      baseCost = 400,
+      costMultiplier = 5.0,
       maxLevel = 8,
       effectPerLevel = 0.2, -- +20% fire rate per level
       description = "Increases fire rate by 20% per level"
     },
-    multiShot = {
-      name = "Multi-Shot",
-      baseCost = 1200,
-      costMultiplier = 5.0,
-      maxLevel = 3,
-      effectPerLevel = 1, -- +1 additional shot per level
-      description = "Adds 1 additional bullet per shot"
-    },
     piercing = {
       name = "Piercing Rounds",
-      baseCost = 800,
-      costMultiplier = 4.5,
+      baseCost = 3000,
+      costMultiplier = 8.0,
       maxLevel = 5,
       effectPerLevel = 1, -- +1 piercing level
       description = "Bullets pierce through 1-5 enemies"
     },
-    speed = {
-      name = "Ship Speed",
-      baseCost = 100,
-      costMultiplier = 2.8,
-      maxLevel = 6,
-      effectPerLevel = 0.15, -- +15% speed per level
-      description = "Increases ship movement speed by 15% per level"
+    multiShot = {
+      name = "Multi-Shot",
+      baseCost = 5000,
+      costMultiplier = 10.0,
+      maxLevel = 3,
+      effectPerLevel = 1, -- +1 additional shot per level
+      description = "Adds 1 additional bullet per shot"
     }
   },
   
