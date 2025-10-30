@@ -2,7 +2,7 @@ local Title = {}
 
 local blink = 0
 local selected = 1
-local items = { "Start", "Upgrades", "Cosmetics", "Settings", "Quit" }
+local items = { "Start", "Boss Gallery", "Upgrades", "Cosmetics", "Settings", "Quit" }
 
 local function layoutButtons(vw, vh)
   local btnH = 56

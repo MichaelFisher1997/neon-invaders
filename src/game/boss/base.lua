@@ -133,6 +133,13 @@ function BossBase.aimedShot(bossX, bossY, speed, damage)
   local Player = require("src.game.player")
   local px, py = Player.x, Player.y
   
+  -- Check if player position is available (not in gallery/menu)
+  if not px or not py then
+    -- Default to shooting straight down when no player
+    Bullets.spawn(bossX, bossY, speed, 'enemy', damage)
+    return
+  end
+  
   -- Calculate angle to player
   local dx = px - bossX
   local dy = py - bossY
@@ -148,6 +155,21 @@ end
 function BossBase.shotgunBurst(bossX, bossY, spreadAngle, pelletCount, speed, damage)
   local Player = require("src.game.player")
   local px, py = Player.x, Player.y
+  
+  -- Check if player position is available
+  if not px or not py then
+    -- Default to shooting downward when no player
+    local baseAngle = math.pi/2 -- Downward
+    for i = 1, pelletCount do
+      local angleOffset = (i - (pelletCount + 1) / 2) * spreadAngle / (pelletCount - 1)
+      local angle = baseAngle + angleOffset
+      
+      local vx = math.cos(angle) * speed
+      local vy = math.sin(angle) * speed
+      Bullets.spawn(bossX, bossY, vy, 'enemy', damage, vx)
+    end
+    return
+  end
   
   -- Calculate base angle to player
   local dx = px - bossX

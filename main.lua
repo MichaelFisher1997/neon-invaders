@@ -17,6 +17,7 @@ local services = {
   tutorial = require("src.ui.tutorial"),
   economy = require("src.systems.economy"),
   upgradeMenu = require("src.ui.upgrademenu"),
+  bossGallery = require("src.ui.bossgallery"),
   events = require("src.game.events"),
   Constants = require("src.config.constants"),
 }
@@ -32,6 +33,7 @@ local uiHandlers = {
   settings = services.settingsUI,
   cosmetics = services.cosmeticsUI,
   upgradeMenu = services.upgradeMenu,
+  bossGallery = services.bossGallery,
 }
 
 function love.load()
@@ -70,6 +72,9 @@ function love.keypressed(key)
         local vw, vh = services.scaling.getVirtualSize()
         services.game.init(vw, vh)
         services.state.set("play")
+      elseif sel == "Boss Gallery" then
+        services.state.set("bossGallery")
+        services.bossGallery.enter()
       elseif sel == "Upgrades" then
         services.state.set("upgradeMenu")
         services.upgradeMenu.init()
@@ -106,9 +111,12 @@ function love.keypressed(key)
   elseif services.state.get() == "cosmetics" then
     local action = services.cosmeticsUI.keypressed(key)
     if action == 'back' then services.state.set("title"); services.title.enter() end
-  elseif services.state.get() == "upgradeMenu" then
-    services.upgradeMenu.keypressed(key)
-  end
+   elseif services.state.get() == "upgradeMenu" then
+     services.upgradeMenu.keypressed(key)
+   elseif services.state.get() == "bossGallery" then
+     local action = services.bossGallery.keypressed(key)
+     if action == 'title' then services.state.set("title"); services.title.enter() end
+   end
 end
 
 function love.update(dt)
@@ -126,7 +134,9 @@ function love.update(dt)
   elseif cur == "settings" then
     services.settingsUI.update(dt)
   elseif cur == "cosmetics" then
-    services.cosmeticsUI.update(dt)
+     services.cosmeticsUI.update(dt)
+  elseif cur == "bossGallery" then
+     services.bossGallery.update(dt)
   elseif cur == "play" then
     services.game.update(dt, services.input.get())
     if services.game.isOver() then services.gameoverUI.enter(); services.state.set("gameover") end
@@ -156,7 +166,9 @@ function love.draw()
   elseif cur == "settings" then
     services.settingsUI.draw(vw, vh)
   elseif cur == "cosmetics" then
-    services.cosmeticsUI.draw(vw, vh)
+     services.cosmeticsUI.draw(vw, vh)
+  elseif cur == "bossGallery" then
+     services.bossGallery.draw(vw, vh)
   else
     -- Center viewport for gameplay states
     services.scaling.pushViewport(centerPanel)
