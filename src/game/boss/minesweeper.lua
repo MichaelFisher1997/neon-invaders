@@ -51,11 +51,23 @@ function Minesweeper.update(dt)
     mine.timer = mine.timer - dt
     
     if mine.timer <= 0 then
-      -- Mine explodes with particle effect
+      -- Mine explodes with particle effect and shotgun blast
       local Particles = require("src.fx.particles")
       if Particles and Particles.burst then
         Particles.burst(mine.x, mine.y, {1.0, 0.5, 0.0}, 32, 300)
       end
+      
+      -- Fire shotgun blast from mine explosion
+      local pelletCount = 12
+      local spreadAngle = math.pi * 2 -- Full 360 degrees
+      for i = 0, pelletCount - 1 do
+        local angle = (i / pelletCount) * spreadAngle
+        local speed = 250 + math.random() * 100
+        local vx = math.cos(angle) * speed
+        local vy = math.sin(angle) * speed
+        Bullets.spawn(mine.x, mine.y, vy, 'enemy', 0.8, vx)
+      end
+      
       table.remove(data.mines, i)
     end
   end
