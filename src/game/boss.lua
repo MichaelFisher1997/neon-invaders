@@ -8,6 +8,11 @@ local data
 
 function Boss.spawnFromConfig(cfg, vw, vh)
   VIRTUAL_WIDTH, VIRTUAL_HEIGHT = vw or 1280, vh or 720
+  -- More aggressive boss health scaling: base 20 + 6 HP per wave + bonus every 10 waves
+  local baseHP = 20 + 6 * cfg.wave
+  local bonusHP = 2 * math.floor(cfg.wave / 10)
+  local hpMax = baseHP + bonusHP
+
   data = {
     x = VIRTUAL_WIDTH / 2,
     y = 140,
@@ -15,8 +20,8 @@ function Boss.spawnFromConfig(cfg, vw, vh)
     h = 64,
     dir = 1,
     speed = 120,
-    hpMax = 20 + 8 * math.floor(cfg.wave / 5),
-    hp = 20 + 8 * math.floor(cfg.wave / 5),
+    hpMax = hpMax,
+    hp = hpMax,
     fireCooldown = 0,
     fireRate = 1.2 + 0.2 * math.floor(cfg.wave / 5),
   }
