@@ -79,10 +79,10 @@ function UpgradeMenu.update(dt)
   local scaledX = mouseX / Scaling.getScale()
   local scaledY = mouseY / Scaling.getScale()
   
-  local backButtonX = VIRTUAL_WIDTH / 2 - 60
-  local backButtonY = VIRTUAL_HEIGHT - 60
-  local backButtonW = 120
-  local backButtonH = 50
+  local backButtonX = 20
+  local backButtonY = 20
+  local backButtonW = 100
+  local backButtonH = 40
   
   state.backButtonHovered = (scaledX >= backButtonX and scaledX <= backButtonX + backButtonW and
                             scaledY >= backButtonY and scaledY <= backButtonY + backButtonH)
@@ -251,27 +251,27 @@ function UpgradeMenu.draw()
     end
   end
   
-  -- Back button with neon styling
-  local backButtonX = VIRTUAL_WIDTH / 2 - 60
-  local backButtonY = VIRTUAL_HEIGHT - 60
-  local backButtonW = 120
-  local backButtonH = 50
+  -- Back button with neon styling (top left)
+  local backButtonX = 20
+  local backButtonY = 20
+  local backButtonW = 100
+  local backButtonH = 40
   
   if state.backButtonHovered then
     love.graphics.setColor(0.153, 0.953, 1.0, 0.8)
   else
     love.graphics.setColor(0.1, 0.1, 0.2, 0.7)
   end
-  love.graphics.rectangle("fill", backButtonX, backButtonY, backButtonW, backButtonH, 12, 12)
+  love.graphics.rectangle("fill", backButtonX, backButtonY, backButtonW, backButtonH, 8, 8)
   
   love.graphics.setColor(0.153, 0.953, 1.0, 1.0)
   love.graphics.setLineWidth(2)
-  love.graphics.rectangle("line", backButtonX, backButtonY, backButtonW, backButtonH, 12, 12)
+  love.graphics.rectangle("line", backButtonX, backButtonY, backButtonW, backButtonH, 8, 8)
   love.graphics.setLineWidth(1)
   
   love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.setFont(love.graphics.newFont(20))
-  love.graphics.printf("BACK", backButtonX, backButtonY + 15, backButtonW, "center")
+  love.graphics.setFont(love.graphics.newFont(16))
+  love.graphics.printf("BACK", backButtonX, backButtonY + 10, backButtonW, "center")
   
   -- Instructions with better styling
   love.graphics.setFont(love.graphics.newFont(12))
