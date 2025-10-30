@@ -142,6 +142,9 @@ function BossGallery.spawnDemoBoss(index)
 end
 
 function BossGallery.update(dt)
+  local BossBase = require("src.game.boss.base")
+  local vw, vh = BossBase.getVirtualSize()
+  
   -- Bounded smooth scrolling to always show 5-6 cards
   local cardHeight = 100
   local visibleCards = 6
@@ -162,7 +165,6 @@ function BossGallery.update(dt)
     
     -- Handle Splitter boss auto-split in gallery
     if demoBoss == "splitter" then
-      local BossBase = require("src.game.boss.base")
       local data = BossBase.getData()
       if data and data.gallerySplitTimer then
         data.gallerySplitTimer = data.gallerySplitTimer - dt
