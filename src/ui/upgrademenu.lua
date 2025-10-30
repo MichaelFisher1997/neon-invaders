@@ -89,14 +89,14 @@ function UpgradeMenu.update(dt)
   
   -- Handle mouse click for upgrades
   if love.mouse.isDown(1) then
-    local upgradeStartY = 120
-    local upgradeHeight = 80
-    local upgradeSpacing = 20
+    local upgradeStartY = 130
+    local upgradeHeight = 120
+    local upgradeSpacing = 10
     
     for i, upgradeType in ipairs(state.upgradeList) do
       local upgradeY = upgradeStartY + (i - 1) * (upgradeHeight + upgradeSpacing)
       
-      if scaledX >= 100 and scaledX <= VIRTUAL_WIDTH - 100 and
+      if scaledX >= (VIRTUAL_WIDTH - 600)/2 and scaledX <= (VIRTUAL_WIDTH - 600)/2 + 600 and
          scaledY >= upgradeY and scaledY <= upgradeY + upgradeHeight then
         state.selectedUpgrade = i
         if not state.lastClickTime or (love.timer.getTime() - state.lastClickTime) > 0.5 then
@@ -135,23 +135,23 @@ function UpgradeMenu.draw()
   love.graphics.setFont(love.graphics.newFont(48))
   local title = "UPGRADES"
   local tw = love.graphics.getFont():getWidth(title)
-  love.graphics.print(title, (VIRTUAL_WIDTH - tw) / 2, 50)
+  love.graphics.print(title, (VIRTUAL_WIDTH - tw) / 2, 30)
   
   -- Glow effect for title
   love.graphics.setColor(0.153, 0.953, 1.0, 0.3)
   love.graphics.setFont(love.graphics.newFont(48))
-  love.graphics.print(title, (VIRTUAL_WIDTH - tw) / 2 + 2, 52)
+  love.graphics.print(title, (VIRTUAL_WIDTH - tw) / 2 + 2, 32)
   
   -- Credits display with neon styling
   local credits = Economy.getCredits()
   love.graphics.setColor(0.5, 1.0, 0.5, 1.0)
   love.graphics.setFont(love.graphics.newFont(24))
-  love.graphics.printf("CREDITS: " .. credits, 0, 100, VIRTUAL_WIDTH, "center")
+  love.graphics.printf("CREDITS: " .. credits, 0, 80, VIRTUAL_WIDTH, "center")
   
   -- Upgrade list with enhanced styling
-  local upgradeStartY = 150
-  local upgradeHeight = 100
-  local upgradeSpacing = 15
+  local upgradeStartY = 130
+  local upgradeHeight = 120
+  local upgradeSpacing = 10
   local upgradeInfo = Economy.getUpgradeInfo()
   local upgradeColors = {
     speed = {0.0, 1.0, 1.0},      -- Cyan
@@ -227,11 +227,11 @@ function UpgradeMenu.draw()
     -- Description
     love.graphics.setColor(0.9, 0.9, 0.9, 1)
     love.graphics.setFont(love.graphics.newFont(16))
-    love.graphics.printf(info.description, cardX + 70, upgradeY + 75, cardW - 100, "left")
+    love.graphics.printf(info.description, cardX + 70, upgradeY + 85, cardW - 100, "left")
     
     -- Cost section
     local costX = cardX + cardW - 150
-    local costY = upgradeY + 20
+    local costY = upgradeY + 25
     if info.currentLevel >= info.maxLevel then
       love.graphics.setColor(0.5, 1.0, 0.5, 1)
       love.graphics.setFont(love.graphics.newFont(20))
@@ -253,7 +253,7 @@ function UpgradeMenu.draw()
   
   -- Back button with neon styling
   local backButtonX = VIRTUAL_WIDTH / 2 - 60
-  local backButtonY = VIRTUAL_HEIGHT - 100
+  local backButtonY = VIRTUAL_HEIGHT - 140
   local backButtonW = 120
   local backButtonH = 50
   
@@ -277,7 +277,7 @@ function UpgradeMenu.draw()
   love.graphics.setFont(love.graphics.newFont(14))
   love.graphics.setColor(0.5, 0.8, 1.0, 0.8)
   love.graphics.printf("↑↓ Select • ENTER/SPACE Purchase • ESC Back", 
-                        0, VIRTUAL_HEIGHT - 35, VIRTUAL_WIDTH, "center")
+                        0, VIRTUAL_HEIGHT - 60, VIRTUAL_WIDTH, "center")
   
   -- Message display with neon styling
   if state.messageTimer > 0 then
