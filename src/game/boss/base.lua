@@ -73,6 +73,7 @@ end
 -- Standard health bar display
 function BossBase.drawHealthBar()
   if not currentBossData then return end
+  if currentBossData.galleryMode then return end  -- Hide health bar in boss gallery
   
   local data = currentBossData
   local barW = 240

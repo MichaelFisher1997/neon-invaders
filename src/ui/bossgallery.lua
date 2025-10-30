@@ -113,6 +113,7 @@ function BossGallery.spawnDemoBoss(index)
     local vw, vh = BossBase.getVirtualSize()
     data.x = vw / 2      -- Center horizontally
     data.y = 140         -- Position at top like in waves
+    data.galleryMode = true  -- Hide health bar in gallery
     
     -- Special handling for different boss types in gallery
     if info.module == "minesweeper" then
@@ -126,7 +127,6 @@ function BossGallery.spawnDemoBoss(index)
       data.speed = 0       -- Keep stationary for other bosses
       -- Special handling for Splitter boss - set health to trigger split after 5s
       data.gallerySplitTimer = 5.0 -- 5 seconds before auto-split
-      data.galleryMode = true
     else
       data.speed = 0       -- Keep stationary for gallery
     end
