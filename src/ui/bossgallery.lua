@@ -114,6 +114,12 @@ function BossGallery.spawnDemoBoss(index)
     data.x = vw / 2      -- Center horizontally
     data.y = 140         -- Position at top like in waves
     data.speed = 0       -- Keep stationary for gallery
+    
+    -- Special handling for Splitter boss - set health to trigger split after 5s
+    if info.module == "splitter" then
+      data.gallerySplitTimer = 5.0 -- 5 seconds before auto-split
+      data.galleryMode = true
+    end
   end
   
   -- Set up mock player position for targeting (bottom center of screen)
@@ -133,6 +139,22 @@ function BossGallery.update(dt)
   -- Update demo boss with firing
   if demoBoss then
     demoTimer = demoTimer + dt
+    
+    -- Handle Splitter boss auto-split in gallery
+    if demoBoss == "splitter" then
+      local BossBase = require("src.game.boss.base")
+      local data = BossBase.getData()
+      if data and data.gallerySplitTimer then
+        data.gallerySplitTimer = data.gallerySplitTimer - dt
+        if data.gallerySplitTimer <= 0 and not data.splitTriggered then
+          -- Trigger the split
+          data.splitTriggered = true
+          data.hp = 0
+          data.gallerySplitTimer = nil
+        end
+      end
+    end
+    
     local BossModule = require("src.game.boss." .. demoBoss)
     if BossModule.update then
       BossModule.update(dt)
