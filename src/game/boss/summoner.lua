@@ -9,10 +9,11 @@ function Summoner.spawnFromConfig(cfg, vw, vh)
   BossBase.setVirtualSize(vw, vh)
   
   local data = BossBase.createBossData(cfg, 140, 60, 1.6)
-  data.spawnTimer = 3.0
-  data.spawnCooldown = 3.0
-  data.maxMinions = 6
+  data.spawnTimer = 2.0
+  data.spawnCooldown = 4.0
+  data.maxMinions = 1 -- Only one minion at a time
   data.minions = {}
+  data.minionSpeed = 120 -- Speed for homing missiles
   
   BossBase.setData(data)
 end
@@ -28,26 +29,57 @@ function Summoner.update(dt)
   -- Standard horizontal movement
   BossBase.standardMovement(dt, 70)
   
-  -- Update minions
+  -- Update minions (homing missiles)
+  local Player = require("src.game.player")
   for i = #data.minions, 1, -1 do
     local minion = data.minions[i]
-    minion.y = minion.y + minion.speed * dt
-    minion.x = minion.x + math.sin(minion.time * 3) * 50 * dt
+    
+    -- Get player position for homing
+    local px, py = Player.x, Player.y
+    
+    -- Calculate direction to player (only if player exists and not too far)
+    if px and py then
+      local dx = px - minion.x
+      local dy = py - minion.y
+      local distance = math.sqrt(dx*dx + dy*dy)
+      
+      -- Only home if player is within reasonable distance (400 pixels)
+      if distance < 400 then
+        -- Normalize direction and apply speed
+        local dirX = (dx / distance) * data.minionSpeed * dt
+        local dirY = (dy / distance) * data.minionSpeed * dt
+        
+        -- Move down and toward player (no sideways movement if too far)
+        minion.x = minion.x + dirX
+        minion.y = minion.y + dirY
+      else
+        -- Player too far, just move down
+        minion.y = minion.y + data.minionSpeed * dt
+      end
+    else
+      -- No player, just move down
+      minion.y = minion.y + data.minionSpeed * dt
+    end
+    
     minion.time = minion.time + dt
     
-    -- Remove minions that go off screen
-    if minion.y > 720 then
+    -- Remove minions that go off screen (explode at bottom)
+    if minion.y > vh then
+      -- Create explosion effect at bottom
+      local Particles = require("src.fx.particles")
+      if Particles and Particles.createExplosion then
+        Particles.createExplosion(minion.x, vh - 20, 0.5)
+      end
       table.remove(data.minions, i)
     end
   end
   
-  -- Spawn new minions
+  -- Spawn new homing minions (one at a time)
   data.spawnTimer = data.spawnTimer - dt
   if data.spawnTimer <= 0 and #data.minions < data.maxMinions then
     local minion = {
-      x = data.x + (math.random() - 0.5) * 100,
+      x = data.x,
       y = data.y + data.h/2,
-      speed = 80 + math.random() * 40,
       time = 0,
       hp = 1
     }
@@ -77,10 +109,19 @@ function Summoner.draw()
   local data = BossBase.getData()
   if not data then return end
   
-  -- Draw minions
+  -- Draw homing minions (missile-like appearance)
   for _, minion in ipairs(data.minions) do
+    -- Draw missile trail
+    love.graphics.setColor(0.8, 0.3, 1.0, 0.4) -- Light purple trail
+    love.graphics.rectangle('fill', minion.x - 3, minion.y - 15, 6, 15, 2, 2)
+    
+    -- Draw missile body
     love.graphics.setColor(0.6, 0.2, 0.8, 1.0) -- Dark purple
-    love.graphics.rectangle('fill', minion.x - 10, minion.y - 10, 20, 20, 3, 3)
+    love.graphics.rectangle('fill', minion.x - 6, minion.y - 8, 12, 16, 3, 3)
+    
+    -- Draw glowing tip
+    love.graphics.setColor(1.0, 0.5, 1.0, 1.0) -- Bright purple tip
+    love.graphics.rectangle('fill', minion.x - 2, minion.y - 8, 4, 4, 1, 1)
   end
   
   -- Draw main boss (dark purple with summoning effect)
