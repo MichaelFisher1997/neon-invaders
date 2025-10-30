@@ -75,9 +75,30 @@ function Phase.draw()
   love.graphics.setColor(unpack(color))
   love.graphics.rectangle('fill', data.x - data.w/2, data.y - data.h/2, data.w, data.h, 10, 10)
   
-  -- Draw phase indicator
-  love.graphics.setColor(1,1,1,1)
-  love.graphics.print("Phase " .. data.phase, data.x - 20, data.y - data.h/2 - 20)
+  -- Draw shield indicator (visual feedback for vulnerability)
+  if not data.vulnerable then
+    -- Draw energy shield when invulnerable
+    love.graphics.setColor(0.3, 0.7, 1.0, 0.3) -- Cyan shield
+    love.graphics.rectangle('fill', data.x - data.w/2 - 8, data.y - data.h/2 - 8, data.w + 16, data.h + 16, 12, 12)
+    
+    -- Shield border with glow effect
+    local glowIntensity = math.sin(love.timer.getTime() * 3) * 0.3 + 0.7
+    love.graphics.setColor(0.3, 0.7, 1.0, glowIntensity)
+    love.graphics.rectangle('line', data.x - data.w/2 - 8, data.y - data.h/2 - 8, data.w + 16, data.h + 16, 12, 12)
+    
+    -- Shield crackles (energy particles)
+    for i = 1, 4 do
+      local angle = (i - 1) * math.pi / 2 + love.timer.getTime() * 2
+      local sparkX = data.x + math.cos(angle) * (data.w/2 + 12)
+      local sparkY = data.y + math.sin(angle) * (data.h/2 + 12)
+      love.graphics.setColor(1.0, 1.0, 1.0, glowIntensity * 0.8)
+      love.graphics.circle('fill', sparkX, sparkY, 2)
+    end
+  else
+    -- Draw vulnerability indicator (subtle glow)
+    love.graphics.setColor(1.0, 1.0, 0.5, 0.4) -- Yellow glow when vulnerable
+    love.graphics.rectangle('fill', data.x - data.w/2 - 4, data.y - data.h/2 - 4, data.w + 8, data.h + 8, 8, 8)
+  end
   
   -- Draw health bar
   BossBase.drawHealthBar()
