@@ -217,7 +217,7 @@ end
 
 function BossGallery.pointerPressed(vw, vh, lx, ly)
   -- Check back button
-  local backBtn = {x = 20, y = 20, w = 100, h = 40}
+  local backBtn = {x = vw - 120, y = 20, w = 100, h = 40}
   if lx >= backBtn.x and lx <= backBtn.x + backBtn.w and
      ly >= backBtn.y and ly <= backBtn.y + backBtn.h then
     if demoBoss then
@@ -283,9 +283,9 @@ function BossGallery.draw(vw, vh)
   
   -- Back button
   love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.rectangle('line', 20, 20, 100, 40, 8, 8)
+  love.graphics.rectangle('line', vw - 120, 20, 100, 40, 8, 8)
   love.graphics.setFont(love.graphics.newFont(18))
-  love.graphics.printf("Back", 20, 35, 100, 'center')
+  love.graphics.printf("Back", vw - 120, 35, 100, 'center')
   
   -- Boss cards - draw on left side with transparency
   local cardX = 20
