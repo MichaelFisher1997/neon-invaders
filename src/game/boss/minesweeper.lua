@@ -10,11 +10,11 @@ function Minesweeper.spawnFromConfig(cfg, vw, vh)
   
   local data = BossBase.createBossData(cfg, 140, 60, 2.5)
   data.mines = {}
-  data.mineCooldown = 0.4 -- Mine dropping during sweep
+  data.mineCooldown = 0.2 -- Faster mine dropping for visibility
   data.mineTimer = 0
   data.movementTimer = 0
   data.movementPattern = "sweep" -- Start with sweep
-  data.baseSpeed = 80 -- Normal boss horizontal speed
+  data.baseSpeed = 150 -- Faster movement for visibility
   data.sweepDirection = 1 -- 1 for right, -1 for left
   data.minesInWave = 0
   data.maxMinesPerWave = 4 -- Drop 3-5 mines per sweep
@@ -24,7 +24,13 @@ function Minesweeper.spawnFromConfig(cfg, vw, vh)
   data.targetX = vw - 100 -- Target position for sweep
   data.zigzagTimer = 0
   
+  -- Initialize position and direction properly
+  data.dir = 1 -- Start moving right
+  data.x = vw / 2 -- Start at center
+  
   BossBase.setData(data)
+  
+
 end
 
 function Minesweeper.exists()
@@ -40,6 +46,8 @@ function Minesweeper.update(dt)
   if data.movementPattern == "sweep" then
     -- Sweep across screen like normal boss movement
     BossBase.standardMovement(dt, data.baseSpeed)
+    
+
     
     -- Drop mines evenly during sweep
     data.mineTimer = data.mineTimer - dt
