@@ -142,8 +142,18 @@ function BossGallery.spawnDemoBoss(index)
 end
 
 function BossGallery.update(dt)
-  -- Smooth scrolling - keep selected item visible
-  targetScroll = -(selected - 1) * 100
+  -- Bounded smooth scrolling to always show 5-6 cards
+  local cardHeight = 100
+  local visibleCards = 6
+  local maxVisibleHeight = visibleCards * cardHeight
+  local listHeight = #bossInfo * cardHeight
+  local maxScroll = 0  -- Can't scroll above first card
+  local minScroll = -math.max(0, listHeight - maxVisibleHeight)  -- Scroll to show last cards
+  
+  -- Calculate target to keep selected in view (center if possible)
+  local idealScroll = -(selected - 1) * cardHeight + (vh - 200 - maxVisibleHeight) / 2
+  targetScroll = math.max(minScroll, math.min(maxScroll, idealScroll))
+  
   scroll = scroll + (targetScroll - scroll) * 0.15
   
   -- Update demo boss with firing
