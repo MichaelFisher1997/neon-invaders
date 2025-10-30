@@ -78,7 +78,7 @@ function Title.draw(vw, vh)
   local os = (love.system and love.system.getOS) and love.system.getOS() or ""
   local prompt = (os == 'Android' or os == 'iOS') and "Tap to select" or "Up/Down to choose, Enter to confirm"
   love.graphics.setColor(1,1,1,0.9)
-  love.graphics.printf(prompt, 0, vh * 0.88, vw, 'center')
+  love.graphics.printf(prompt, 0, vh * 0.92, vw, 'center')
 end
 
 return Title
