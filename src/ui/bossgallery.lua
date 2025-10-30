@@ -146,8 +146,8 @@ function BossGallery.update(dt)
   local vw, vh = BossBase.getVirtualSize()
   
   -- Bounded smooth scrolling to always show 5-6 cards
-  local cardHeight = 100
-  local visibleCards = 6
+  local cardHeight = 120  -- Updated to match new spacing
+  local visibleCards = 5  -- Show 5 cards for better visibility
   local maxVisibleHeight = visibleCards * cardHeight
   local listHeight = #bossInfo * cardHeight
   local maxScroll = 0  -- Can't scroll above first card
@@ -231,10 +231,10 @@ function BossGallery.pointerPressed(vw, vh, lx, ly)
   -- Check boss cards
   local cardX = 20
   local cardWidth = 300
-  local cardHeight = 90
+  local cardHeight = 110  -- Match drawing height
   local cardStartY = 80 + scroll  -- Start below back button
   for i, info in ipairs(bossInfo) do
-    local cardY = cardStartY + (i - 1) * 100
+    local cardY = cardStartY + (i - 1) * 120  -- Match drawing spacing
     local card = {x = cardX, y = cardY, w = cardWidth, h = cardHeight}
     if lx >= card.x and lx <= card.x + card.w and
        ly >= card.y and ly <= card.y + card.h then
@@ -290,13 +290,14 @@ function BossGallery.draw(vw, vh)
   -- Boss cards - draw on left side with transparency
   local cardX = 20
   local cardWidth = 300
+  local cardHeight = 110  -- Increased for better text spacing
   local cardStartY = 80  -- Start below back button
   for i, info in ipairs(bossInfo) do
-    local cardY = cardStartY + (i - 1) * 100 + scroll
+    local cardY = cardStartY + (i - 1) * 120 + scroll  -- Increased spacing to 120px
     
     -- Only draw if card is visible on screen
     if cardY >= -100 and cardY <= vh + 100 then
-      local card = {x = cardX, y = cardY, w = cardWidth, h = 90}
+      local card = {x = cardX, y = cardY, w = cardWidth, h = cardHeight}
       
       -- Semi-transparent background for cards
       if i == selected then
@@ -316,18 +317,18 @@ function BossGallery.draw(vw, vh)
       
       -- Boss name
       love.graphics.setColor(1, 1, 1, 1)
-      love.graphics.setFont(love.graphics.newFont(16))
-      love.graphics.print(info.name, card.x + 45, card.y + 15)
+      love.graphics.setFont(love.graphics.newFont(18))  -- Slightly larger for clarity
+      love.graphics.print(info.name, card.x + 45, card.y + 12)
       
       -- Waves
-      love.graphics.setFont(love.graphics.newFont(12))
+      love.graphics.setFont(love.graphics.newFont(14))  -- Larger waves font
       love.graphics.setColor(0.153, 0.953, 1.0, 1.0)
       love.graphics.print(info.waves, card.x + 45, card.y + 35)
       
       -- Description (shortened)
-      love.graphics.setColor(1, 1, 1, 0.7)
-      love.graphics.setFont(love.graphics.newFont(10))
-      love.graphics.printf(info.description, card.x + 10, card.y + 55, card.w - 20, 'left')
+      love.graphics.setColor(1, 1, 1, 0.8)  -- Higher alpha for better readability
+      love.graphics.setFont(love.graphics.newFont(12))  -- Larger description font
+      love.graphics.printf(info.description, card.x + 10, card.y + 60, card.w - 20, 'left')  -- More space above
     end
   end
   
