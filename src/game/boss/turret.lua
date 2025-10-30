@@ -94,18 +94,15 @@ function Turret.draw()
     
     -- Turret base (hexagonal)
     love.graphics.setColor(0.2, 0.2, 0.2, 1.0) -- Dark base
+    local hexPoints = {}
     for i = 0, 5 do
       local angle = i * math.pi / 3
       local px = turretX + math.cos(angle) * 10
       local py = turretY + math.sin(angle) * 10
-      if i == 0 then
-        love.graphics.moveTo(px, py)
-      else
-        love.graphics.lineTo(px, py)
-      end
+      table.insert(hexPoints, px)
+      table.insert(hexPoints, py)
     end
-    love.graphics.closePath()
-    love.graphics.fill()
+    love.graphics.polygon('fill', hexPoints)
     
     -- Turret barrel (elongated and detailed)
     love.graphics.setColor(0.6, 0.6, 0.6, 1.0) -- Metal gray
