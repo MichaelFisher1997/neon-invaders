@@ -89,7 +89,7 @@ function UpgradeMenu.update(dt)
   
   -- Handle mouse click for upgrades
   if love.mouse.isDown(1) then
-    local upgradeStartY = 120
+    local upgradeStartY = 110
     local upgradeHeight = 100
     local upgradeSpacing = 5
     
@@ -149,7 +149,7 @@ function UpgradeMenu.draw()
   love.graphics.printf("CREDITS: " .. credits, 0, 80, VIRTUAL_WIDTH, "center")
   
   -- Upgrade list with enhanced styling
-  local upgradeStartY = 120
+  local upgradeStartY = 110
   local upgradeHeight = 100
   local upgradeSpacing = 5
   local upgradeInfo = Economy.getUpgradeInfo()
