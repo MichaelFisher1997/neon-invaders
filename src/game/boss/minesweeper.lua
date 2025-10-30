@@ -51,7 +51,11 @@ function Minesweeper.update(dt)
     mine.timer = mine.timer - dt
     
     if mine.timer <= 0 then
-      -- Mine explodes
+      -- Mine explodes with particle effect
+      local Particles = require("src.fx.particles")
+      if Particles and Particles.burst then
+        Particles.burst(mine.x, mine.y, {1.0, 0.5, 0.0}, 32, 300)
+      end
       table.remove(data.mines, i)
     end
   end
@@ -95,9 +99,14 @@ function Minesweeper.draw()
   for _, mine in ipairs(data.mines) do
     local flashIntensity = mine.timer < 1.0 and (1.0 - mine.timer) or 0.0
     
-    -- Mine body
-    love.graphics.setColor(1.0, 0.5, 0.0, 1.0) -- Orange
+    -- Mine body with pulsing effect
+    local pulse = math.sin(love.timer.getTime() * 4) * 0.2 + 0.8
+    love.graphics.setColor(1.0, 0.5, 0.0, pulse) -- Orange with pulse
     love.graphics.circle('fill', mine.x, mine.y, mine.radius)
+    
+    -- Inner core
+    love.graphics.setColor(1.0, 0.8, 0.0, 1.0) -- Bright orange
+    love.graphics.circle('fill', mine.x, mine.y, mine.radius * 0.4)
     
     -- Warning flash when about to explode
     if flashIntensity > 0 then
@@ -105,9 +114,12 @@ function Minesweeper.draw()
       love.graphics.circle('fill', mine.x, mine.y, mine.radius * 1.5)
     end
     
-    -- Timer indicator
-    love.graphics.setColor(1,1,1,1)
-    love.graphics.print(string.format("%.1f", mine.timer), mine.x - 10, mine.y - 5)
+    -- Danger ring (rotating)
+    local ringAngle = love.timer.getTime() * 2
+    love.graphics.setColor(1.0, 0.2, 0.0, 0.6) -- Red danger ring
+    love.graphics.setLineWidth(2)
+    love.graphics.circle('line', mine.x, mine.y, mine.radius + 8)
+    love.graphics.setLineWidth(1)
   end
   
   -- Draw main boss (orange/yellow)
