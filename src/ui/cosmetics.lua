@@ -49,14 +49,14 @@ local function getShapes()
 end
 
 local function getLayout(vw, vh)
-  local tabButtonsY = 80
+  local tabButtonsY = 110
   local tabButtonW = 120
   local tabButtonH = 40
   local colorsTabX = vw/2 - tabButtonW - 10
   local shapesTabX = vw/2 + 10
   
-  local itemStartY = 140
-  local itemHeight = 70
+  local itemStartY = 170
+  local itemHeight = 80
   local itemSpacing = 10
   local itemWidth = math.min(450, vw * 0.8)
   local itemX = (vw - itemWidth) / 2
@@ -118,10 +118,10 @@ local function drawColorItem(layout, item, index, isSelected, displayIndex)
   
   -- Text
   love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.setFont(love.graphics.newFont(18))
+  love.graphics.setFont(love.graphics.newFont(20))
   love.graphics.print(item.name, rect.x + 60, rect.y + 10)
   
-  love.graphics.setFont(love.graphics.newFont(14))
+  love.graphics.setFont(love.graphics.newFont(16))
   love.graphics.setColor(0.8, 0.8, 0.8, 1)
   love.graphics.print(item.description, rect.x + 60, rect.y + 35)
   
@@ -165,10 +165,10 @@ local function drawShapeItem(layout, item, index, isSelected, displayIndex)
   
   -- Text
   love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.setFont(love.graphics.newFont(18))
+  love.graphics.setFont(love.graphics.newFont(20))
   love.graphics.print(item.name, rect.x + 90, rect.y + 12)
   
-  love.graphics.setFont(love.graphics.newFont(14))
+  love.graphics.setFont(love.graphics.newFont(16))
   love.graphics.setColor(0.8, 0.8, 0.8, 1)
   love.graphics.print(item.description, rect.x + 90, rect.y + 35)
   
@@ -212,12 +212,12 @@ function UICosmetics.draw(vw, vh)
   
   -- Title
   love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.setFont(love.graphics.newFont(36))
-  love.graphics.printf("Cosmetics Shop", 0, 30, vw, "center")
+  love.graphics.setFont(love.graphics.newFont(40))
+  love.graphics.printf("Cosmetics Shop", 0, 20, vw, "center")
   
   -- Credits display
-  love.graphics.setFont(love.graphics.newFont(20))
-  love.graphics.printf("Credits: " .. Economy.getCredits(), 0, 60, vw, "center")
+  love.graphics.setFont(love.graphics.newFont(22))
+  love.graphics.printf("Credits: " .. Economy.getCredits(), 0, 70, vw, "center")
   
   -- Tab buttons
   local colorsTab = layout.tabButtons.colors
@@ -233,7 +233,7 @@ function UICosmetics.draw(vw, vh)
   love.graphics.setColor(0.5, 0.7, 1.0, 1.0)
   love.graphics.rectangle("line", colorsTab.x, colorsTab.y, colorsTab.w, colorsTab.h, 6, 6)
   love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.setFont(love.graphics.newFont(18))
+  love.graphics.setFont(love.graphics.newFont(20))
   love.graphics.printf("Colors", colorsTab.x, colorsTab.y + 10, colorsTab.w, "center")
   
   -- Shapes tab
@@ -246,7 +246,7 @@ function UICosmetics.draw(vw, vh)
   love.graphics.setColor(0.5, 0.7, 1.0, 1.0)
   love.graphics.rectangle("line", shapesTab.x, shapesTab.y, shapesTab.w, shapesTab.h, 6, 6)
   love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.setFont(love.graphics.newFont(18))
+  love.graphics.setFont(love.graphics.newFont(20))
   love.graphics.printf("Shapes", shapesTab.x, shapesTab.y + 10, shapesTab.w, "center")
   
   -- Draw items based on current tab (with scrolling)
