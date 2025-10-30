@@ -143,7 +143,7 @@ end
 
 function BossGallery.update(dt)
   -- Smooth scrolling - keep selected item visible
-  targetScroll = -(selected - 1) * 120
+  targetScroll = -(selected - 1) * 100
   scroll = scroll + (targetScroll - scroll) * 0.15
   
   -- Update demo boss with firing
@@ -217,9 +217,13 @@ function BossGallery.pointerPressed(vw, vh, lx, ly)
   end
   
   -- Check boss cards
-  local cardY = 100 + scroll
+  local cardX = 20
+  local cardWidth = 300
+  local cardHeight = 90
+  local cardStartY = 80 + scroll  -- Start below back button
   for i, info in ipairs(bossInfo) do
-    local card = {x = vw/2 - 200, y = cardY, w = 400, h = 150}
+    local cardY = cardStartY + (i - 1) * 100
+    local card = {x = cardX, y = cardY, w = cardWidth, h = cardHeight}
     if lx >= card.x and lx <= card.x + card.w and
        ly >= card.y and ly <= card.y + card.h then
       selected = i
@@ -227,7 +231,6 @@ function BossGallery.pointerPressed(vw, vh, lx, ly)
       require('src.audio.audio').play('ui_click')
       return nil
     end
-    cardY = cardY + 200
   end
   
   return nil
@@ -275,8 +278,9 @@ function BossGallery.draw(vw, vh)
   -- Boss cards - draw on left side with transparency
   local cardX = 20
   local cardWidth = 300
+  local cardStartY = 80  -- Start below back button
   for i, info in ipairs(bossInfo) do
-    local cardY = 100 + (i - 1) * 100 + scroll
+    local cardY = cardStartY + (i - 1) * 100 + scroll
     
     -- Only draw if card is visible on screen
     if cardY >= -100 and cardY <= vh + 100 then
