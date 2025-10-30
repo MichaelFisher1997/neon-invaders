@@ -34,32 +34,62 @@ function Summoner.update(dt)
   for i = #data.minions, 1, -1 do
     local minion = data.minions[i]
     
-    -- Get player position for homing
+    -- Get player position for drift direction (not active chasing)
     local px, py = Player.x, Player.y
     
-    -- Calculate direction to player (only if player exists and not too far)
+    -- Always move down
+    minion.y = minion.y + data.minionSpeed * dt
+    
+    -- Calculate drift direction to player (only if player exists and not too far)
     if px and py then
       local dx = px - minion.x
       local dy = py - minion.y
       local distance = math.sqrt(dx*dx + dy*dy)
       
-      -- Only home if player is within reasonable distance (400 pixels)
+      -- Only drift if player is within reasonable distance (400 pixels)
       if distance < 400 then
-        -- Normalize direction and apply speed
-        local dirX = (dx / distance) * data.minionSpeed * dt
-        local dirY = (dy / distance) * data.minionSpeed * dt
+        -- Calculate drift component (limited sideways movement)
+        local driftStrength = 0.3 -- Only 30% of speed goes toward player
+        local dirX = (dx / distance) * data.minionSpeed * driftStrength * dt
         
-        -- Move down and toward player (no sideways movement if too far)
+        -- Apply drift (limited sideways movement)
         minion.x = minion.x + dirX
-        minion.y = minion.y + dirY
-      else
-        -- Player too far, just move down
-        minion.y = minion.y + data.minionSpeed * dt
       end
-    else
-      -- No player, just move down
-      minion.y = minion.y + data.minionSpeed * dt
     end
+    
+    -- Check collision with player
+    if px and py then
+      local playerWidth = 40
+      local playerHeight = 18
+      if minion.x > px - playerWidth/2 and minion.x < px + playerWidth/2 and
+         minion.y > py - playerHeight/2 and minion.y < py + playerHeight/2 then
+        -- Hit player, explode
+        local Particles = require("src.fx.particles")
+        if Particles and Particles.burst then
+          Particles.burst(minion.x, minion.y, {1.0, 0.5, 1.0}, 24, 200)
+        end
+        table.remove(data.minions, i)
+        return -- Skip removal check since we already removed it
+      end
+    end
+    
+    -- Check collision with player bullets
+    local Bullets = require("src.game.bullets")
+    Bullets.eachActive(function(bullet)
+      if bullet.from == 'player' and bullet.active then
+        -- Simple AABB collision
+        if math.abs(minion.x - bullet.x) < 12 and math.abs(minion.y - bullet.y) < 12 then
+          -- Hit by bullet, explode
+          local Particles = require("src.fx.particles")
+          if Particles and Particles.burst then
+            Particles.burst(minion.x, minion.y, {1.0, 0.5, 1.0}, 16, 150)
+          end
+          bullet.active = false -- Remove bullet
+          table.remove(data.minions, i)
+          return -- Skip removal check since we already removed it
+        end
+      end
+    end)
     
     minion.time = minion.time + dt
     
