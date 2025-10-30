@@ -12,9 +12,9 @@ function Shield.spawnFromConfig(cfg, vw, vh)
   data.shieldHealth = {100, 100, 100} -- 3 shield segments
   data.shieldMaxHealth = {100, 100, 100}
   data.shieldPositions = {
-    {x = -60, y = -40}, 
-    {x = 0, y = -45}, 
-    {x = 60, y = -40}
+    {x = -60, y = 0}, 
+    {x = 0, y = 0}, 
+    {x = 60, y = 0}
   }
   data.shieldsDown = false
   
