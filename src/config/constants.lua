@@ -141,8 +141,8 @@ Constants.ECONOMY = {
     },
     damage = {
       name = "Damage",
-      baseCost = 300,
-      costMultiplier = 4.5,
+      baseCost = 500,
+      costMultiplier = 5.5,
       maxLevel = 10,
       effectPerLevel = 0.25, -- +25% damage per level
       description = "Increases bullet damage by 25% per level"
