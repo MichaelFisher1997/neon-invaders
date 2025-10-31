@@ -58,7 +58,8 @@ local function clearUserData()
   local Economy = require("src.systems.economy")
   local Cosmetics = require("src.systems.cosmetics")
   local Highscores = require("src.systems.highscores")
-  local Settings = require("src.systems.settings")
+local Settings = require("src.systems.settings")
+local Fonts = require("src.ui.fonts")
   
   Economy.reset()
   Cosmetics.reset()
@@ -105,8 +106,7 @@ local function drawSlider(x, y, value, label, isSelected)
   end
   
   -- Label - MUCH BIGGER AND CLEARER
-  local labelFont = love.graphics.newFont(36)
-  love.graphics.setFont(labelFont)
+  love.graphics.setFont(Fonts.get(36))
   local labelW = labelFont:getWidth(label)
   
   -- Multi-layer shadow for MAXIMUM visibility
@@ -121,8 +121,7 @@ local function drawSlider(x, y, value, label, isSelected)
   love.graphics.print(label, x, y - 43)
   
   -- Percentage - BIG AND BOLD
-  local percentFont = love.graphics.newFont(32)
-  love.graphics.setFont(percentFont)
+  love.graphics.setFont(Fonts.get(32))
   local percentText = string.format("%d%%", math.floor(value*100 + 0.5))
   
   -- Shadow
@@ -263,8 +262,7 @@ function UISettings.draw(vw, vh)
   local s = Settings.get()
   
   -- HUGE TITLE with dramatic styling
-  local titleFont = love.graphics.newFont(64)
-  love.graphics.setFont(titleFont)
+  love.graphics.setFont(Fonts.get(64))
   local titleY = vh*0.06
   
   -- Multiple shadow layers for depth
@@ -308,8 +306,7 @@ function UISettings.draw(vw, vh)
   end
   
   -- Label - BIG AND BRIGHT
-  local labelFont = love.graphics.newFont(32)
-  love.graphics.setFont(labelFont)
+  love.graphics.setFont(Fonts.get(32))
   local labelY = diffY - 48
   
   -- Label shadow
@@ -334,8 +331,7 @@ function UISettings.draw(vw, vh)
   love.graphics.setLineWidth(1)
   
   -- Value text - HUGE
-  local valueFont = love.graphics.newFont(28)
-  love.graphics.setFont(valueFont)
+  love.graphics.setFont(Fonts.get(28))
   
   -- Value shadow
   love.graphics.setColor(0, 0, 0, 1)
@@ -357,8 +353,7 @@ function UISettings.draw(vw, vh)
   love.graphics.rectangle('line', leftX, diffY - 5, boxW, boxH, 12, 12)
   love.graphics.setLineWidth(1)
   
-  local arrowFont = love.graphics.newFont(36)
-  love.graphics.setFont(arrowFont)
+  love.graphics.setFont(Fonts.get(36))
   
   -- Arrow shadow
   love.graphics.setColor(0, 0, 0, 1)
@@ -389,8 +384,7 @@ function UISettings.draw(vw, vh)
 
   -- Clear User Data button - BIG AND OBVIOUS
   local clearY = y + lineH*3 + 8
-  local buttonFont = love.graphics.newFont(26)
-  love.graphics.setFont(buttonFont)
+  love.graphics.setFont(Fonts.get(26))
   
   -- Selection background
   if selection == 4 then
@@ -440,8 +434,7 @@ function UISettings.draw(vw, vh)
   -- Selector highlight removed - individual elements already show selection state via their borders
 
   -- Help text - BIGGER AND CLEARER (moved to very bottom)
-  local helpFont = love.graphics.newFont(18)
-  love.graphics.setFont(helpFont)
+  love.graphics.setFont(Fonts.get(18))
   
   -- Shadow
   love.graphics.setColor(0, 0, 0, 1)
@@ -470,10 +463,10 @@ function UISettings.draw(vw, vh)
     
     -- Dialog text
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.setFont(love.graphics.newFont(20))
+    love.graphics.setFont(Fonts.get(20))
     love.graphics.printf("Clear All User Data?", dialogX, dialogY + 30, dialogW, 'center')
     
-    love.graphics.setFont(love.graphics.newFont(16))
+    love.graphics.setFont(Fonts.get(16))
     love.graphics.setColor(0.8, 0.8, 0.8, 1)
     love.graphics.printf("This will permanently delete:", dialogX, dialogY + 70, dialogW, 'center')
     love.graphics.printf("• All settings and preferences", dialogX, dialogY + 90, dialogW, 'center')

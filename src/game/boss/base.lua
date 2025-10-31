@@ -1,5 +1,6 @@
 -- Base boss framework for shared functionality
 local Bullets = require("src.game.bullets")
+local Fonts = require("src.ui.fonts")
 
 local BossBase = {}
 
@@ -121,7 +122,7 @@ function BossBase.drawHealthBar(vw, hudPanelHeight)
   love.graphics.setLineWidth(1)
   
   -- HP text overlay with shadow (centered in bar)
-  love.graphics.setFont(love.graphics.newFont(11))
+  love.graphics.setFont(Fonts.get(11))
   local hpText = string.format("%d / %d HP", math.ceil(data.hp), data.hpMax)
   local hpTextW = love.graphics.getFont():getWidth(hpText)
   local textX = vw/2 - hpTextW/2
@@ -135,7 +136,7 @@ function BossBase.drawHealthBar(vw, hudPanelHeight)
   love.graphics.print(hpText, textX, barY + 3)
   
   -- Boss label BELOW the bar (centered)
-  love.graphics.setFont(love.graphics.newFont(9))
+  love.graphics.setFont(Fonts.get(9))
   love.graphics.setColor(0, 0, 0, 0.9)
   local label = "BOSS"
   local labelW = love.graphics.getFont():getWidth(label)

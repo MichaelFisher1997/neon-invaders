@@ -1,4 +1,5 @@
 local Highscores = require("src.systems.highscores")
+local Fonts = require("src.ui.fonts")
 
 local GameOver = {}
 
@@ -21,8 +22,8 @@ local function layoutButtons(vw, vh)
   local gapY = 16
   local btnH = 56
   local btnW = math.min(360, math.floor(vw * 0.6))
-  local titleFont = love.graphics.newFont(32)
-  local scoreFont = love.graphics.newFont(20)
+  local titleFont = Fonts.get(32)
+  local scoreFont = Fonts.get(20)
   local startY = math.floor(vh * 0.38)
   local rects = {}
   for i,_ in ipairs(options) do
@@ -84,13 +85,13 @@ function GameOver.draw(score, vw, vh)
       love.graphics.rectangle('fill', r.x, r.y, r.w, r.h, 10, 10)
     end
     love.graphics.setColor(1,1,1,1)
-    love.graphics.setFont(love.graphics.newFont(20))
+    love.graphics.setFont(Fonts.get(20))
     love.graphics.printf(options[i].label, r.x, r.y + r.h/2 - 12, r.w, 'center')
   end
 
   -- High scores below
   local list = Highscores.list()
-  love.graphics.setFont(love.graphics.newFont(18))
+  love.graphics.setFont(Fonts.get(18))
   local y = rects[#rects].y + rects[#rects].h + 28
   love.graphics.printf("High Scores:", 0, y, vw, 'center')
   for i,entry in ipairs(list) do
@@ -102,7 +103,7 @@ function GameOver.draw(score, vw, vh)
   local os = (love.system and love.system.getOS) and love.system.getOS() or ""
   local help = (os == 'Android' or os == 'iOS') and 'Tap a button' or 'Up/Down to choose, Enter to confirm'
   love.graphics.setColor(1,1,1,0.85)
-  love.graphics.setFont(love.graphics.newFont(16))
+  love.graphics.setFont(Fonts.get(16))
   love.graphics.printf(help, 0, vh - 24 - 16, vw, 'center')
 end
 

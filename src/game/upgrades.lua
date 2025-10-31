@@ -1,4 +1,5 @@
 local Upgrades = {}
+local Fonts = require("src.ui.fonts")
 
 local choices = {
   { id='move', label='+15% Move Speed' },
@@ -50,8 +51,8 @@ function Upgrades.pointerPressed(vw, vh, lx, ly)
   local minCardW, maxCardW = 160, 260
   local aspect = 120/260
   -- Use same fonts to get exact heights
-  local titleFont = love.graphics.newFont(28)
-  local helpFont = love.graphics.newFont(16)
+  local titleFont = Fonts.get(28)
+  local helpFont = Fonts.get(16)
 
   -- Determine columns that fit
   local bestCols = #choices
@@ -97,9 +98,9 @@ function Upgrades.draw(vw, vh)
   love.graphics.rectangle('fill', 0, 0, vw, vh)
 
   -- Typography
-  local titleFont = love.graphics.newFont(28)
-  local bodyFont = love.graphics.newFont(18)
-  local helpFont = love.graphics.newFont(16)
+  local titleFont = Fonts.get(28)
+  local bodyFont = Fonts.get(18)
+  local helpFont = Fonts.get(16)
   love.graphics.setColor(1,1,1,1)
   love.graphics.setFont(titleFont)
   love.graphics.printf('Choose an Upgrade', 0, math.floor(vh*0.20), vw, 'center')

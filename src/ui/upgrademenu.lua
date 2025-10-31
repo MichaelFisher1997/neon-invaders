@@ -3,6 +3,7 @@ local Constants = require("src.config.constants")
 local Economy = require("src.systems.economy")
 local Input = require("src.core.input")
 local State = require("src.core.state")
+local Fonts = require("src.ui.fonts")
 
 local VIRTUAL_WIDTH, VIRTUAL_HEIGHT = Constants.VIRTUAL_WIDTH, Constants.VIRTUAL_HEIGHT
 
@@ -115,6 +116,40 @@ function UpgradeMenu.update(dt)
   end
 end
 
+function UpgradeMenu.pointerPressed(vw, vh, lx, ly)
+  -- Handle back button
+  local backButtonX = 20
+  local backButtonY = 20
+  local backButtonW = 100
+  local backButtonH = 40
+  
+  if lx >= backButtonX and lx <= backButtonX + backButtonW and
+     ly >= backButtonY and ly <= backButtonY + backButtonH then
+    require('src.audio.audio').play('ui_click')
+    State.pop()
+    return nil
+  end
+  
+  -- Handle upgrade cards
+  local upgradeStartY = 110
+  local upgradeHeight = 100
+  local upgradeSpacing = 5
+  
+  for i, upgradeType in ipairs(state.upgradeList) do
+    local upgradeY = upgradeStartY + (i - 1) * (upgradeHeight + upgradeSpacing)
+    
+    if lx >= (VIRTUAL_WIDTH - 600)/2 and lx <= (VIRTUAL_WIDTH - 600)/2 + 600 and
+       ly >= upgradeY and ly <= upgradeY + upgradeHeight then
+      state.selectedUpgrade = i
+      local success, message = Economy.purchaseUpgrade(upgradeType)
+      showMessage(message)
+      break
+    end
+  end
+  
+  return nil
+end
+
 -- Draw upgrade menu
 function UpgradeMenu.draw()
   -- Neon-themed background with gradient effect
@@ -132,20 +167,20 @@ function UpgradeMenu.draw()
   
   -- Title with neon glow
   love.graphics.setColor(0.153, 0.953, 1.0, 1.0)
-  love.graphics.setFont(love.graphics.newFont(40))
+  Fonts.set(40)
   local title = "UPGRADES"
   local tw = love.graphics.getFont():getWidth(title)
   love.graphics.print(title, (VIRTUAL_WIDTH - tw) / 2, 30)
   
   -- Glow effect for title
   love.graphics.setColor(0.153, 0.953, 1.0, 0.3)
-  love.graphics.setFont(love.graphics.newFont(40))
+  Fonts.set(40)
   love.graphics.print(title, (VIRTUAL_WIDTH - tw) / 2 + 2, 32)
   
   -- Credits display with neon styling
   local credits = Economy.getCredits()
   love.graphics.setColor(0.5, 1.0, 0.5, 1.0)
-  love.graphics.setFont(love.graphics.newFont(20))
+  Fonts.set(20)
   love.graphics.printf("CREDITS: " .. credits, 0, 80, VIRTUAL_WIDTH, "center")
   
   -- Upgrade list with enhanced styling
@@ -201,7 +236,7 @@ function UpgradeMenu.draw()
     
     -- Upgrade name with color accent
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.setFont(love.graphics.newFont(24))
+    Fonts.set(24)
     love.graphics.print(info.name, cardX + 70, upgradeY + 15)
     
     -- Level progress bar
@@ -221,12 +256,12 @@ function UpgradeMenu.draw()
     
     -- Level text
     love.graphics.setColor(1, 1, 1, 1)
-    love.graphics.setFont(love.graphics.newFont(14))
+    Fonts.set(14)
     love.graphics.printf("Level " .. info.currentLevel .. "/" .. info.maxLevel, barX + barW + 10, barY, 100, "left")
     
     -- Description
     love.graphics.setColor(0.9, 0.9, 0.9, 1)
-    love.graphics.setFont(love.graphics.newFont(14))
+    Fonts.set(14)
     love.graphics.printf(info.description, cardX + 70, upgradeY + 65, cardW - 100, "left")
     
     -- Cost section
@@ -234,7 +269,7 @@ function UpgradeMenu.draw()
     local costY = upgradeY + 15
     if info.currentLevel >= info.maxLevel then
       love.graphics.setColor(0.5, 1.0, 0.5, 1)
-      love.graphics.setFont(love.graphics.newFont(18))
+      Fonts.set(18)
       love.graphics.printf("MAXED", costX, costY, 120, "center")
     else
       local missingCredits = math.max(0, (info.cost or 0) - credits)
@@ -243,13 +278,13 @@ function UpgradeMenu.draw()
       else
         love.graphics.setColor(1.0, 0.5, 0.5, 1)
       end
-      love.graphics.setFont(love.graphics.newFont(14))
+      Fonts.set(14)
       love.graphics.printf("Cost", costX, costY, 120, "center")
-      love.graphics.setFont(love.graphics.newFont(18))
+      Fonts.set(18)
       love.graphics.printf(info.cost, costX, costY + 20, 120, "center")
       if not info.canPurchase then
         love.graphics.setColor(1.0, 0.7, 0.7, 1)
-        love.graphics.setFont(love.graphics.newFont(12))
+Fonts.set(12)
         love.graphics.printf("Need +" .. missingCredits, costX, costY + 40, 120, "center")
       end
     end
@@ -274,11 +309,11 @@ function UpgradeMenu.draw()
   love.graphics.setLineWidth(1)
   
   love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.setFont(love.graphics.newFont(16))
+  Fonts.set(16)
   love.graphics.printf("BACK", backButtonX, backButtonY + 10, backButtonW, "center")
   
   -- Instructions with better styling
-  love.graphics.setFont(love.graphics.newFont(12))
+  love.graphics.setFont(Fonts.get(12))
   love.graphics.setColor(0.5, 0.8, 1.0, 0.8)
   love.graphics.printf("↑↓ Select • ENTER/SPACE Purchase • ESC Back", 
                         0, VIRTUAL_HEIGHT - 30, VIRTUAL_WIDTH, "center")
@@ -287,12 +322,12 @@ function UpgradeMenu.draw()
   if state.messageTimer > 0 then
     local alpha = math.min(1.0, state.messageTimer / 0.5) * 0.9
     love.graphics.setColor(1.0, 0.8, 0.2, alpha)
-    love.graphics.setFont(love.graphics.newFont(20))
+    Fonts.set(20)
     love.graphics.printf(state.message, 0, VIRTUAL_HEIGHT / 2 - 20, VIRTUAL_WIDTH, "center")
     
     -- Glow effect
     love.graphics.setColor(1.0, 0.8, 0.2, alpha * 0.3)
-    love.graphics.setFont(love.graphics.newFont(20))
+    Fonts.set(20)
     love.graphics.printf(state.message, 0, VIRTUAL_HEIGHT / 2 - 20 + 2, VIRTUAL_WIDTH, "center")
   end
 end

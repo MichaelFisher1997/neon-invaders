@@ -202,6 +202,12 @@ function Input.handleUIPointer(gameState, vw, vh, vx, vy, uiHandlers)
     return uiHandlers.settings.pointerPressed(vw, vh, vx, vy)
   elseif gameState == "cosmetics" and uiHandlers.cosmetics then
     return uiHandlers.cosmetics.pointerPressed(vw, vh, vx, vy)
+  elseif gameState == "upgradeMenu" and uiHandlers.upgradeMenu then
+    return uiHandlers.upgradeMenu.pointerPressed(vw, vh, vx, vy)
+  elseif gameState == "bossGallery" and uiHandlers.bossGallery then
+    return uiHandlers.bossGallery.pointerPressed(vw, vh, vx, vy)
+  elseif gameState == "pause" and inCenterPanel and uiHandlers.pause then
+    return uiHandlers.pause.pointerPressed(centerPanel.w, centerPanel.h, lx, ly)
   elseif gameState == "play" and inCenterPanel and uiHandlers.upgrades then
     return uiHandlers.upgrades.pointerPressed(centerPanel.w, centerPanel.h, lx, ly)
   end

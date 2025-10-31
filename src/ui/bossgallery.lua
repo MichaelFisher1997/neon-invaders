@@ -1,4 +1,5 @@
 local BossGallery = {}
+local Fonts = require("src.ui.fonts")
 
 local selected = 1
 local scroll = 0
@@ -276,7 +277,7 @@ function BossGallery.draw(vw, vh)
   
   -- Title
   love.graphics.setColor(0.153, 0.953, 1.0, 1.0)
-  love.graphics.setFont(love.graphics.newFont(36))
+  love.graphics.setFont(Fonts.get(36))
   local title = "BOSS GALLERY"
   local tw = love.graphics.getFont():getWidth(title)
   love.graphics.print(title, (vw - tw) / 2, 30)
@@ -284,7 +285,7 @@ function BossGallery.draw(vw, vh)
   -- Back button
   love.graphics.setColor(1, 1, 1, 1)
   love.graphics.rectangle('line', vw - 120, 20, 100, 40, 8, 8)
-  love.graphics.setFont(love.graphics.newFont(18))
+  love.graphics.setFont(Fonts.get(18))
   love.graphics.printf("Back", vw - 120, 35, 100, 'center')
   
   -- Boss cards - draw on left side with transparency
@@ -317,23 +318,23 @@ function BossGallery.draw(vw, vh)
       
       -- Boss name
       love.graphics.setColor(1, 1, 1, 1)
-      love.graphics.setFont(love.graphics.newFont(18))  -- Slightly larger for clarity
+      love.graphics.setFont(Fonts.get(18))  -- Slightly larger for clarity
       love.graphics.print(info.name, card.x + 45, card.y + 12)
       
       -- Waves
-      love.graphics.setFont(love.graphics.newFont(14))  -- Larger waves font
+      love.graphics.setFont(Fonts.get(14))  -- Larger waves font
       love.graphics.setColor(0.153, 0.953, 1.0, 1.0)
       love.graphics.print(info.waves, card.x + 45, card.y + 35)
       
       -- Description (shortened)
       love.graphics.setColor(1, 1, 1, 0.8)  -- Higher alpha for better readability
-      love.graphics.setFont(love.graphics.newFont(12))  -- Larger description font
+      love.graphics.setFont(Fonts.get(12))  -- Larger description font
       love.graphics.printf(info.description, card.x + 10, card.y + 60, card.w - 20, 'left')  -- More space above
     end
   end
   
   -- Navigation hint
-  love.graphics.setFont(love.graphics.newFont(14))
+  love.graphics.setFont(Fonts.get(14))
   love.graphics.setColor(1, 1, 1, 0.8)
   love.graphics.printf("↑↓ Browse bosses • ESC Return • Watch attack patterns", 0, vh - 25, vw, 'center')
 end

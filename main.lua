@@ -18,6 +18,7 @@ local services = {
   economy = require("src.systems.economy"),
   upgradeMenu = require("src.ui.upgrademenu"),
   bossGallery = require("src.ui.bossgallery"),
+  pauseUI = require("src.ui.pause"),
   events = require("src.game.events"),
   Constants = require("src.config.constants"),
 }
@@ -34,6 +35,7 @@ local uiHandlers = {
   cosmetics = services.cosmeticsUI,
   upgradeMenu = services.upgradeMenu,
   bossGallery = services.bossGallery,
+  pause = services.pauseUI,
 }
 
 function love.load()
@@ -345,6 +347,17 @@ function handleUIAction(action, curState)
     end
   elseif curState == "cosmetics" then
     if action == 'back' then
+      services.state.set("title")
+      services.title.enter()
+    end
+  elseif curState == "pause" then
+    if action == 'resume' then
+      services.state.set("play")
+    elseif action == 'restart' then
+      local vw, vh = services.scaling.getVirtualSize()
+      services.game.init(vw, vh)
+      services.state.set("play")
+    elseif action == 'quit' then
       services.state.set("title")
       services.title.enter()
     end
