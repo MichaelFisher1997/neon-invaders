@@ -164,7 +164,7 @@ function BossGallery.update(dt)
   scroll = scroll + (targetScroll - scroll) * 0.15
   
   -- Apply friction to momentum scrolling
-  if not isDragging then
+  if not isDragging and scrollVelocity then
     scrollVelocity = scrollVelocity * 0.9
     if math.abs(scrollVelocity) < 1 then
       scrollVelocity = 0
