@@ -319,6 +319,9 @@ function handleUIAction(action, curState)
     elseif action == "Upgrades" then
       services.state.set("upgradeMenu")
       services.upgradeMenu.init()
+    elseif action == "Boss Gallery" then
+      services.state.set("bossGallery")
+      services.bossGallery.enter()
     elseif action == "Cosmetics" then
       services.state.set("cosmetics")
       services.cosmeticsUI.enter()
