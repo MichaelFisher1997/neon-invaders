@@ -353,6 +353,11 @@ function handleUIAction(action, curState)
       services.state.set("title")
       services.title.enter()
     end
+  elseif curState == "bossGallery" then
+    if action == 'title' then
+      services.state.set("title")
+      services.title.enter()
+    end
   elseif curState == "pause" then
     if action == 'resume' then
       services.state.set("play")
