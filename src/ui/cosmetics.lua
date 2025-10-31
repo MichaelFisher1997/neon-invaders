@@ -17,6 +17,13 @@ local state = {
   messageTimer = 0
 }
 
+-- Touch scrolling state
+local touchStartY = nil
+local touchStartTime = nil
+local scrollVelocity = 0
+local isDragging = false
+local currentScroll = 0  -- Track which scroll we're modifying
+
 -- Dynamic RGB preview (faster!)
 local function rgbTripColor(time)
   local t = time * 2.5
@@ -482,16 +489,78 @@ function UICosmetics.pointerPressed(vw, vh, lx, ly)
     end
   end
   
+  -- Initialize touch scrolling for item list area
+  if lx >= layout.items.x and lx <= layout.items.x + layout.items.width and
+     ly >= layout.items.startY then
+    touchStartY = ly
+    touchStartTime = love.timer.getTime()
+    isDragging = true
+    scrollVelocity = 0
+    currentScroll = state.tab == "colors" and state.colorScroll or state.shapeScroll
+  end
+  
   return nil
 end
 
 function UICosmetics.pointerMoved(vw, vh, lx, ly)
-  -- No swipe functionality needed for new layout
+  if touchStartY and isDragging then
+    local deltaY = ly - touchStartY
+    
+    -- Update appropriate scroll based on current tab
+    if state.tab == "colors" then
+      state.colorScroll = state.colorScroll + deltaY
+      currentScroll = state.colorScroll
+    else
+      state.shapeScroll = state.shapeScroll + deltaY
+      currentScroll = state.shapeScroll
+    end
+    
+    -- Apply boundaries
+    local layout = getLayout(vw, vh)
+    local maxScroll = 0
+    local items = state.tab == "colors" and getColors() or getShapes()
+    local listHeight = #items * (layout.items.height + layout.items.spacing)
+    local minScroll = -math.max(0, listHeight - layout.items.listHeight)
+    
+    if state.tab == "colors" then
+      state.colorScroll = math.max(minScroll, math.min(maxScroll, state.colorScroll))
+    else
+      state.shapeScroll = math.max(minScroll, math.min(maxScroll, state.shapeScroll))
+    end
+    
+    touchStartY = ly
+    scrollVelocity = deltaY
+  end
   return nil
 end
 
 function UICosmetics.pointerReleased(vw, vh, lx, ly)
-  -- No swipe functionality needed for new layout
+  if touchStartY then
+    local touchDuration = love.timer.getTime() - (touchStartTime or 0)
+    if touchDuration < 0.3 and math.abs(scrollVelocity) > 50 then
+      -- Quick swipe - apply momentum
+      if state.tab == "colors" then
+        state.colorScroll = state.colorScroll + scrollVelocity * 0.3
+      else
+        state.shapeScroll = state.shapeScroll + scrollVelocity * 0.3
+      end
+    end
+    
+    -- Apply boundaries
+    local layout = getLayout(vw, vh)
+    local maxScroll = 0
+    local items = state.tab == "colors" and getColors() or getShapes()
+    local listHeight = #items * (layout.items.height + layout.items.spacing)
+    local minScroll = -math.max(0, listHeight - layout.items.listHeight)
+    
+    state.colorScroll = math.max(minScroll, math.min(maxScroll, state.colorScroll))
+    state.shapeScroll = math.max(minScroll, math.min(maxScroll, state.shapeScroll))
+  end
+  
+  touchStartY = nil
+  touchStartTime = nil
+  scrollVelocity = 0
+  isDragging = false
   return nil
 end
 

@@ -221,6 +221,8 @@ function Input.handleUIMove(gameState, vw, vh, vx, vy, uiHandlers)
     uiHandlers.settings.pointerMoved(vw, vh, vx, vy)
   elseif gameState == "cosmetics" and uiHandlers.cosmetics then
     uiHandlers.cosmetics.pointerMoved(vw, vh, vx, vy)
+  elseif gameState == "bossGallery" and uiHandlers.bossGallery then
+    uiHandlers.bossGallery.pointerMoved(vw, vh, vx, vy)
   end
 end
 
@@ -230,6 +232,8 @@ function Input.handleUIRelease(gameState, vw, vh, vx, vy, uiHandlers)
     uiHandlers.settings.pointerReleased()
   elseif gameState == "cosmetics" and uiHandlers.cosmetics then
     uiHandlers.cosmetics.pointerReleased(vw, vh, vx, vy)
+  elseif gameState == "bossGallery" and uiHandlers.bossGallery then
+    uiHandlers.bossGallery.pointerReleased(vw, vh, vx, vy)
   end
 end
 
