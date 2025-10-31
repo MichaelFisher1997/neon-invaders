@@ -122,7 +122,7 @@ function Splitter.draw()
   
   -- Draw health bar for main boss (or combined if split)
   if not data.splitTriggered then
-    BossBase.drawHealthBar()
+    -- BossBase.drawHealthBar() -- Now drawn by HUD
   end
 end
 

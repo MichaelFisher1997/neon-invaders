@@ -165,7 +165,7 @@ function Summoner.draw()
   love.graphics.rectangle('fill', data.x - data.w/2, data.y - data.h/2, data.w, data.h, 10, 10)
   
   -- Draw health bar
-  BossBase.drawHealthBar()
+  -- BossBase.drawHealthBar() -- Now drawn by HUD
 end
 
 function Summoner.hit(dmg)

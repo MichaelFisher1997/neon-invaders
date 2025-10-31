@@ -101,7 +101,7 @@ function Phase.draw()
   end
   
   -- Draw health bar
-  BossBase.drawHealthBar()
+  -- BossBase.drawHealthBar() -- Now drawn by HUD
 end
 
 function Phase.hit(dmg)

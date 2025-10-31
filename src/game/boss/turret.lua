@@ -155,7 +155,7 @@ function Turret.draw()
   love.graphics.setLineWidth(1)
   
   -- Draw health bar
-  BossBase.drawHealthBar()
+  -- BossBase.drawHealthBar() -- Now drawn by HUD
 end
 
 function Turret.hit(dmg)

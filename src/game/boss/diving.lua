@@ -122,7 +122,7 @@ function Diving.draw()
   BossBase.drawRectBoss(color)
   
   -- Draw health bar
-  BossBase.drawHealthBar()
+  -- BossBase.drawHealthBar() -- Now drawn by HUD
 end
 
 function Diving.hit(dmg)

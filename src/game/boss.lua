@@ -99,8 +99,7 @@ function Boss.draw()
     love.graphics.setColor(0.541, 0.169, 0.886, 1.0) -- purple
     love.graphics.rectangle('fill', data.x - data.w/2, data.y - data.h/2, data.w, data.h, 10, 10)
     
-    -- health bar
-    BossBase.drawHealthBar()
+    -- health bar now drawn by HUD on top
   end
 end
 

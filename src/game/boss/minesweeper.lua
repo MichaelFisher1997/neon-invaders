@@ -279,7 +279,7 @@ function Minesweeper.draw()
   love.graphics.rectangle('fill', data.x - data.w/2 - 5, data.y + data.h/2, data.w + 10, 25, 5, 5)
   
   -- Health bar
-  BossBase.drawHealthBar()
+  -- BossBase.drawHealthBar() -- Now drawn by HUD
 end
 
 function Minesweeper.hit(dmg)

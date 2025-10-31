@@ -71,19 +71,78 @@ function BossBase.drawRectBoss(color, outlineColor)
 end
 
 -- Standard health bar display
-function BossBase.drawHealthBar()
+function BossBase.drawHealthBar(vw, hudPanelHeight)
   if not currentBossData then return end
   if currentBossData.galleryMode then return end  -- Hide health bar in boss gallery
   
+  -- Get viewport width if not provided (for legacy calls from boss modules)
+  if not vw then
+    local scaling = require("src.systems.scaling")
+    vw = scaling.getVirtualSize()
+    hudPanelHeight = 90
+  end
+  
   local data = currentBossData
-  local barW = 240
+  local barW = 450  -- 75% of 600
+  local barH = 18   -- 75% of 24
+  local barX = vw/2 - barW/2
+  local barY = (hudPanelHeight or 60) + 8  -- Position BELOW the HUD
   local ratio = data.hp / data.hpMax
   
-  love.graphics.setColor(1,1,1,1)
-  love.graphics.rectangle('line', VIRTUAL_WIDTH/2 - barW/2, 32, barW, 10)
+  -- Health bar background (very dark)
+  love.graphics.setColor(0.04, 0.02, 0.04, 1)
+  love.graphics.rectangle('fill', barX, barY, barW, barH, 5, 5)
+  
+  -- Health bar fill with gradient effect
+  if ratio > 0 then
+    local fillW = (barW - 4) * math.max(0, ratio)
+    
+    -- Darker bottom layer
+    love.graphics.setColor(0.7, 0.13, 0.45, 1.0)
+    love.graphics.rectangle('fill', barX + 2, barY + 2, fillW, barH - 4, 4, 4)
+    
+    -- Bright top layer (gradient effect)
+    love.graphics.setColor(1.0, 0.25, 0.65, 1.0)
+    love.graphics.rectangle('fill', barX + 2, barY + 2, fillW, (barH - 4) * 0.4, 4, 4)
+  end
+  
+  -- Health bar outer glow
+  for i = 1, 2 do
+    love.graphics.setColor(1.0, 0.182, 0.651, 0.15 / i)
+    love.graphics.setLineWidth(1)
+    love.graphics.rectangle('line', barX - i, barY - i, barW + i*2, barH + i*2, 5, 5)
+  end
+  love.graphics.setLineWidth(1)
+  
+  -- Health bar thick border (bright magenta)
+  love.graphics.setColor(1.0, 0.182, 0.651, 1.0)
+  love.graphics.setLineWidth(2)
+  love.graphics.rectangle('line', barX, barY, barW, barH, 5, 5)
+  love.graphics.setLineWidth(1)
+  
+  -- HP text overlay with shadow (centered in bar)
+  love.graphics.setFont(love.graphics.newFont(11))
+  local hpText = string.format("%d / %d HP", math.ceil(data.hp), data.hpMax)
+  local hpTextW = love.graphics.getFont():getWidth(hpText)
+  local textX = vw/2 - hpTextW/2
+  
+  -- Text shadow
+  love.graphics.setColor(0, 0, 0, 1)
+  love.graphics.print(hpText, textX + 1, barY + 3 + 1)
+  
+  -- Text
+  love.graphics.setColor(1, 1, 1, 1)
+  love.graphics.print(hpText, textX, barY + 3)
+  
+  -- Boss label BELOW the bar (centered)
+  love.graphics.setFont(love.graphics.newFont(9))
+  love.graphics.setColor(0, 0, 0, 0.9)
+  local label = "BOSS"
+  local labelW = love.graphics.getFont():getWidth(label)
+  love.graphics.print(label, vw/2 - labelW/2 + 1, barY + barH + 3 + 1)
   
   love.graphics.setColor(1.0, 0.182, 0.651, 1.0)
-  love.graphics.rectangle('fill', VIRTUAL_WIDTH/2 - barW/2 + 2, 34, (barW-4) * math.max(0, ratio), 6)
+  love.graphics.print(label, vw/2 - labelW/2, barY + barH + 3)
 end
 
 -- Standard movement (horizontal back and forth)
