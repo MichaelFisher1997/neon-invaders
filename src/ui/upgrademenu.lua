@@ -126,7 +126,7 @@ function UpgradeMenu.pointerPressed(vw, vh, lx, ly)
   if lx >= backButtonX and lx <= backButtonX + backButtonW and
      ly >= backButtonY and ly <= backButtonY + backButtonH then
     require('src.audio.audio').play('ui_click')
-    State.pop()
+    State.set("title")
     return nil
   end
   
