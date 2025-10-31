@@ -122,16 +122,16 @@ local function drawColorItem(layout, item, index, isSelected, displayIndex)
     previewColor = item.color or {1,1,1,1}
   end
   love.graphics.setColor(previewColor)
-  love.graphics.circle("fill", rect.x + 30, rect.y + rect.h/2, 15)
+  love.graphics.circle("fill", rect.x + 30, rect.y + rect.h/2, 20)
   
   -- Text
   love.graphics.setColor(1, 1, 1, 1)
   love.graphics.setFont(Fonts.get(20))
-  love.graphics.print(item.name, rect.x + 60, rect.y + 10)
+  love.graphics.print(item.name, rect.x + 70, rect.y + 10)
   
   love.graphics.setFont(Fonts.get(16))
   love.graphics.setColor(0.8, 0.8, 0.8, 1)
-  love.graphics.print(item.description, rect.x + 60, rect.y + 35)
+  love.graphics.print(item.description, rect.x + 70, rect.y + 35)
   
   -- Status
   if isUnlocked then
@@ -169,18 +169,18 @@ local function drawShapeItem(layout, item, index, isSelected, displayIndex)
   
   -- Shape preview (use player proportions for preview consistency)
   love.graphics.setColor(Cosmetics.getColor())
-  local previewWidth = Constants.PLAYER.width * 1.4
-  local previewHeight = Constants.PLAYER.height * 1.4
-  Cosmetics.drawSpecificShape(item.id, rect.x + 50, rect.y + rect.h/2, previewWidth, previewHeight)
+  local previewWidth = Constants.PLAYER.width * 2.5
+  local previewHeight = Constants.PLAYER.height * 2.5
+  Cosmetics.drawSpecificShape(item.id, rect.x + 30, rect.y + rect.h/2, previewWidth, previewHeight)
   
   -- Text
   love.graphics.setColor(1, 1, 1, 1)
   love.graphics.setFont(Fonts.get(20))
-  love.graphics.print(item.name, rect.x + 90, rect.y + 12)
+  love.graphics.print(item.name, rect.x + 130, rect.y + 12)
   
   love.graphics.setFont(Fonts.get(16))
   love.graphics.setColor(0.8, 0.8, 0.8, 1)
-  love.graphics.print(item.description, rect.x + 90, rect.y + 35)
+  love.graphics.print(item.description, rect.x + 130, rect.y + 35)
   
   -- Status
   if isUnlocked then
@@ -267,9 +267,11 @@ function UICosmetics.draw(vw, vh)
     
     for displayIndex = startIndex, endIndex do
       local actualIndex = displayIndex
-      local isSelected = (actualIndex == state.colorSelection)
-      local displayPos = displayIndex - startIndex + 1
-      drawColorItem(layout, colors[actualIndex], actualIndex, isSelected, displayPos)
+      if actualIndex >= 1 and actualIndex <= #colors and colors[actualIndex] then
+        local isSelected = (actualIndex == state.colorSelection)
+        local displayPos = displayIndex - startIndex + 1
+        drawColorItem(layout, colors[actualIndex], actualIndex, isSelected, displayPos)
+      end
     end
     
     -- Scroll indicators
@@ -277,10 +279,14 @@ function UICosmetics.draw(vw, vh)
       love.graphics.setColor(0.7, 0.7, 0.7, 0.7)
       love.graphics.setFont(Fonts.get(14))
       if state.colorScroll > 0 then
-        love.graphics.printf("▲", layout.items.x + layout.items.width/2 - 10, layout.items.startY - 20, 20, "center")
+        local arrowX = layout.items.x + layout.items.width/2
+        local arrowY = layout.items.startY - 15
+        love.graphics.polygon("fill", arrowX - 5, arrowY + 3, arrowX + 5, arrowY + 3, arrowX, arrowY - 3)
       end
       if endIndex < #colors then
-        love.graphics.printf("▼", layout.items.x + layout.items.width/2 - 10, layout.items.startY + layout.items.listHeight + 5, 20, "center")
+        local arrowX = layout.items.x + layout.items.width/2
+        local arrowY = layout.items.startY + layout.items.listHeight + 10
+        love.graphics.polygon("fill", arrowX - 5, arrowY - 3, arrowX + 5, arrowY - 3, arrowX, arrowY + 3)
       end
     end
   else
@@ -290,9 +296,11 @@ function UICosmetics.draw(vw, vh)
     
     for displayIndex = startIndex, endIndex do
       local actualIndex = displayIndex
-      local isSelected = (actualIndex == state.shapeSelection)
-      local displayPos = displayIndex - startIndex + 1
-      drawShapeItem(layout, shapes[actualIndex], actualIndex, isSelected, displayPos)
+      if actualIndex >= 1 and actualIndex <= #shapes and shapes[actualIndex] then
+        local isSelected = (actualIndex == state.shapeSelection)
+        local displayPos = displayIndex - startIndex + 1
+        drawShapeItem(layout, shapes[actualIndex], actualIndex, isSelected, displayPos)
+      end
     end
     
     -- Scroll indicators
@@ -300,10 +308,14 @@ function UICosmetics.draw(vw, vh)
       love.graphics.setColor(0.7, 0.7, 0.7, 0.7)
       love.graphics.setFont(Fonts.get(14))
       if state.shapeScroll > 0 then
-        love.graphics.printf("▲", layout.items.x + layout.items.width/2 - 10, layout.items.startY - 20, 20, "center")
+        local arrowX = layout.items.x + layout.items.width/2
+        local arrowY = layout.items.startY - 15
+        love.graphics.polygon("fill", arrowX - 5, arrowY + 3, arrowX + 5, arrowY + 3, arrowX, arrowY - 3)
       end
       if endIndex < #shapes then
-        love.graphics.printf("▼", layout.items.x + layout.items.width/2 - 10, layout.items.startY + layout.items.listHeight + 5, 20, "center")
+        local arrowX = layout.items.x + layout.items.width/2
+        local arrowY = layout.items.startY + layout.items.listHeight + 10
+        love.graphics.polygon("fill", arrowX - 5, arrowY - 3, arrowX + 5, arrowY - 3, arrowX, arrowY + 3)
       end
     end
   end
@@ -321,8 +333,27 @@ function UICosmetics.draw(vw, vh)
   -- Instructions
   love.graphics.setFont(Fonts.get(14))
   love.graphics.setColor(0.7, 0.7, 0.7, 1)
-  love.graphics.printf("Use ↑↓ to select, ENTER to purchase/equip, TAB to switch tabs, ESC to go back", 
-                      0, vh - 30, vw, "center")
+  love.graphics.setFont(Fonts.get(14))
+  love.graphics.setColor(0.7, 0.7, 0.7, 1)
+  local y = vh - 30
+  local font = Fonts.get(14)
+  local useText = "Use UP/DOWN "
+  local restText = " arrows to select, ENTER to purchase/equip, TAB to switch tabs, ESC to go back"
+  local useWidth = font:getWidth(useText)
+  local restWidth = font:getWidth(restText)
+  local arrowWidth = 20
+  local totalWidth = useWidth + arrowWidth + restWidth
+  local startX = (vw - totalWidth) / 2
+  love.graphics.print(useText, startX, y)
+  local arrowX = startX + useWidth
+  -- Up arrow (solid)
+  love.graphics.polygon("fill", arrowX + 3, y + 12, arrowX + 8, y + 12, arrowX + 5.5, y + 6)
+  -- Down arrow (solid)
+  love.graphics.polygon("fill", arrowX + 3, y + 8, arrowX + 8, y + 8, arrowX + 5.5, y + 14)
+  if restText then
+    love.graphics.print(restText, arrowX + arrowWidth, y)
+  end
+
   
   -- Message display
   if state.messageTimer > 0 then
@@ -519,13 +550,12 @@ function UICosmetics.pointerMoved(vw, vh, lx, ly)
     local layout = getLayout(vw, vh)
     local maxScroll = 0
     local items = state.tab == "colors" and getColors() or getShapes()
-    local listHeight = #items * (layout.items.height + layout.items.spacing)
-    local minScroll = -math.max(0, listHeight - layout.items.listHeight)
+    local maxScrollOffset = math.max(0, #items - layout.items.visibleCount)
     
     if state.tab == "colors" then
-      state.colorScroll = math.max(minScroll, math.min(maxScroll, state.colorScroll))
+      state.colorScroll = math.max(0, math.min(maxScrollOffset, state.colorScroll))
     else
-      state.shapeScroll = math.max(minScroll, math.min(maxScroll, state.shapeScroll))
+      state.shapeScroll = math.max(0, math.min(maxScrollOffset, state.shapeScroll))
     end
     
     touchStartY = ly
@@ -550,11 +580,10 @@ function UICosmetics.pointerReleased(vw, vh, lx, ly)
     local layout = getLayout(vw, vh)
     local maxScroll = 0
     local items = state.tab == "colors" and getColors() or getShapes()
-    local listHeight = #items * (layout.items.height + layout.items.spacing)
-    local minScroll = -math.max(0, listHeight - layout.items.listHeight)
+    local maxScrollOffset = math.max(0, #items - layout.items.visibleCount)
     
-    state.colorScroll = math.max(minScroll, math.min(maxScroll, state.colorScroll))
-    state.shapeScroll = math.max(minScroll, math.min(maxScroll, state.shapeScroll))
+    state.colorScroll = math.max(0, math.min(maxScrollOffset, state.colorScroll))
+    state.shapeScroll = math.max(0, math.min(maxScrollOffset, state.shapeScroll))
   end
   
   touchStartY = nil

@@ -317,8 +317,22 @@ Fonts.set(12)
   -- Instructions with better styling
   love.graphics.setFont(Fonts.get(12))
   love.graphics.setColor(0.5, 0.8, 1.0, 0.8)
-  love.graphics.printf("↑↓ Select • ENTER/SPACE Purchase • ESC Back", 
-                        0, VIRTUAL_HEIGHT - 30, VIRTUAL_WIDTH, "center")
+  local font = Fonts.get(12)
+  local y = VIRTUAL_HEIGHT - 30
+  local useText = ""
+  local restText = " Select • ENTER/SPACE Purchase • ESC Back"
+  local useWidth = font:getWidth(useText)
+  local restWidth = font:getWidth(restText)
+  local arrowWidth = 20
+  local totalWidth = useWidth + arrowWidth + restWidth
+  local startX = (VIRTUAL_WIDTH - totalWidth) / 2
+  love.graphics.print(useText, startX, y)
+  local arrowX = startX + useWidth
+  -- Up arrow
+  love.graphics.polygon("line", arrowX + 5, y + 8, arrowX + 10, y + 3, arrowX + 15, y + 8)
+  -- Down arrow
+  love.graphics.polygon("line", arrowX + 5, y + 13, arrowX + 10, y + 18, arrowX + 15, y + 13)
+  love.graphics.print(restText, arrowX + arrowWidth, y)
   
   -- Message display with neon styling
   if state.messageTimer > 0 then

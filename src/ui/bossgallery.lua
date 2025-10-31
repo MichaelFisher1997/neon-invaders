@@ -444,7 +444,22 @@ function BossGallery.draw(vw, vh)
   -- Navigation hint
   love.graphics.setFont(Fonts.get(14))
   love.graphics.setColor(1, 1, 1, 0.8)
-  love.graphics.printf("↑↓ Browse bosses • ESC Return • Watch attack patterns", 0, vh - 25, vw, 'center')
+  local font = Fonts.get(14)
+  local y = vh - 25
+  local useText = ""
+  local restText = " Browse bosses • ESC Return • Watch attack patterns"
+  local useWidth = font:getWidth(useText)
+  local restWidth = font:getWidth(restText)
+  local arrowWidth = 20
+  local totalWidth = useWidth + arrowWidth + restWidth
+  local startX = (vw - totalWidth) / 2
+  love.graphics.print(useText, startX, y)
+  local arrowX = startX + useWidth
+  -- Up arrow
+  love.graphics.polygon("line", arrowX + 5, y + 8, arrowX + 10, y + 3, arrowX + 15, y + 8)
+  -- Down arrow
+  love.graphics.polygon("line", arrowX + 5, y + 13, arrowX + 10, y + 18, arrowX + 15, y + 13)
+  love.graphics.print(restText, arrowX + arrowWidth, y)
 end
 
 return BossGallery
