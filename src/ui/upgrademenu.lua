@@ -77,8 +77,9 @@ function UpgradeMenu.update(dt)
   -- Handle mouse hover for back button
   local Scaling = require("src.systems.scaling")
   local mouseX, mouseY = love.mouse.getPosition()
-  local scaledX = mouseX / Scaling.getScale()
-  local scaledY = mouseY / Scaling.getScale()
+  local scale, offsetX, offsetY = Scaling.getScale()
+  local scaledX = (mouseX - offsetX) / scale
+  local scaledY = (mouseY - offsetY) / scale
   
   local backButtonX = 20
   local backButtonY = 20
@@ -141,6 +142,7 @@ function UpgradeMenu.pointerPressed(vw, vh, lx, ly)
     if lx >= (VIRTUAL_WIDTH - 600)/2 and lx <= (VIRTUAL_WIDTH - 600)/2 + 600 and
        ly >= upgradeY and ly <= upgradeY + upgradeHeight then
       state.selectedUpgrade = i
+
       local success, message = Economy.purchaseUpgrade(upgradeType)
       showMessage(message)
       break
