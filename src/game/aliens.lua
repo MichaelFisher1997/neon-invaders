@@ -1,6 +1,8 @@
 local Aliens = {}
 
 local VIRTUAL_WIDTH, VIRTUAL_HEIGHT = 1280, 720
+local Constants = require("src.config.constants")
+local Bullets = require("src.game.bullets")
 
 local formation = {
   originX = 160,
@@ -17,13 +19,293 @@ local formation = {
 
 local ALIEN_W, ALIEN_H = 36, 22
 
+-- --- Alien rendering helpers -------------------------------------------------
+local function clampColorComponent(value)
+  if value < 0 then return 0 end
+  if value > 1 then return 1 end
+  return value
+end
+
+local function shadeColor(color, delta)
+  return clampColorComponent(color[1] + delta),
+         clampColorComponent(color[2] + delta),
+         clampColorComponent(color[3] + delta)
+end
+
+local function drawNormalizedPolygon(points, cx, cy, halfW, halfH)
+  local vertices = {}
+  for _, point in ipairs(points) do
+    table.insert(vertices, cx + point[1] * halfW)
+    table.insert(vertices, cy + point[2] * halfH)
+  end
+  love.graphics.polygon("fill", vertices)
+end
+
+local BASIC_HULL = {
+  {0.0, -1.0}, {0.6, -0.45}, {0.85, -0.05}, {0.6, 0.45},
+  {0.25, 1.0}, {-0.25, 1.0}, {-0.6, 0.45}, {-0.85, -0.05}, {-0.6, -0.45}
+}
+
+local BASIC_PLATE = {
+  {0.0, -0.7}, {0.45, -0.2}, {0.4, 0.35}, {0.18, 0.9},
+  {-0.18, 0.9}, {-0.4, 0.35}, {-0.45, -0.2}
+}
+
+local TANK_BODY = {
+  {0.0, -0.9}, {0.75, -0.45}, {0.95, 0.1}, {0.65, 1.0},
+  {-0.65, 1.0}, {-0.95, 0.1}, {-0.75, -0.45}
+}
+
+local TANK_PLATE = {
+  {0.0, -0.5}, {0.4, -0.15}, {0.38, 0.55}, {0.15, 0.85},
+  {-0.15, 0.85}, {-0.38, 0.55}, {-0.4, -0.15}
+}
+
+local TANK_TURRET = {
+  {0.0, -0.95}, {0.18, -0.65}, {0.18, -0.35}, {-0.18, -0.35}, {-0.18, -0.65}
+}
+
+local SPEEDY_FUSELAGE = {
+  {0.0, -1.0}, {0.28, -0.6}, {0.45, -0.2}, {0.32, 0.3},
+  {0.12, 1.0}, {-0.12, 1.0}, {-0.32, 0.3}, {-0.45, -0.2}, {-0.28, -0.6}
+}
+
+local SPEEDY_WING = {
+  {0.0, -0.2}, {0.75, 0.05}, {0.6, 0.35}, {0.2, 0.25}
+}
+
+local SNIPER_CORE = {
+  {0.0, -0.9}, {0.55, -0.4}, {0.6, 0.2}, {0.3, 0.95},
+  {-0.3, 0.95}, {-0.6, 0.2}, {-0.55, -0.4}
+}
+
+local SNIPER_SCOPE = {
+  {0.0, -0.75}, {0.22, -0.35}, {0.18, 0.32}, {-0.18, 0.32}, {-0.22, -0.35}
+}
+
+local GHOST_HULL = {
+  {0.0, -1.0}, {0.58, -0.6}, {0.8, -0.05}, {0.65, 0.45},
+  {0.35, 1.0}, {0.0, 0.75}, {-0.35, 1.0}, {-0.65, 0.45}, {-0.8, -0.05}, {-0.58, -0.6}
+}
+
+local function drawAlienBasic(alien, x, y, w, h, color, alpha)
+  local cx, cy = x + w / 2, y + h / 2
+  local halfW, halfH = w / 2, h / 2
+
+  love.graphics.setColor(color[1], color[2], color[3], alpha)
+  drawNormalizedPolygon(BASIC_HULL, cx, cy, halfW, halfH)
+
+  local lr, lg, lb = shadeColor(color, 0.18)
+  love.graphics.setColor(lr, lg, lb, alpha)
+  drawNormalizedPolygon(BASIC_PLATE, cx, cy + halfH * 0.05, halfW * 0.78, halfH * 0.85)
+
+  love.graphics.setColor(0, 0, 0, alpha)
+  love.graphics.circle("fill", cx - halfW * 0.28, cy - halfH * 0.1, halfH * 0.12)
+  love.graphics.circle("fill", cx + halfW * 0.28, cy - halfH * 0.1, halfH * 0.12)
+
+  love.graphics.setColor(1, 1, 1, alpha * 0.6)
+  love.graphics.polygon("fill",
+    cx - halfW * 0.26, cy + halfH * 0.55,
+    cx, cy + halfH * 0.72,
+    cx + halfW * 0.26, cy + halfH * 0.55,
+    cx, cy + halfH * 0.9
+  )
+end
+
+local function drawAlienTank(alien, x, y, w, h, color, alpha)
+  local cx, cy = x + w / 2, y + h / 2
+  local halfW, halfH = w / 2, h / 2
+
+  love.graphics.setColor(color[1], color[2], color[3], alpha)
+  drawNormalizedPolygon(TANK_BODY, cx, cy, halfW, halfH)
+
+  local dr, dg, db = shadeColor(color, -0.2)
+  love.graphics.setColor(dr, dg, db, alpha)
+  love.graphics.rectangle("fill", cx - halfW, cy + halfH * 0.55, w, halfH * 0.4, halfH * 0.2, halfH * 0.2)
+
+  local lr, lg, lb = shadeColor(color, 0.15)
+  love.graphics.setColor(lr, lg, lb, alpha)
+  drawNormalizedPolygon(TANK_PLATE, cx, cy, halfW * 0.8, halfH * 0.9)
+
+  local turretHeight = halfH * 0.5
+  love.graphics.setColor(dr, dg, db, alpha)
+  drawNormalizedPolygon(TANK_TURRET, cx, cy - halfH * 0.2, halfW * 0.4, halfH * 0.9)
+
+  love.graphics.setColor(dr, dg, db, alpha)
+  love.graphics.rectangle("fill", cx - halfW * 0.05, y - halfH * 0.2, halfW * 0.1, turretHeight)
+  love.graphics.rectangle("fill", cx - halfW * 0.3, y - halfH * 0.05, halfW * 0.6, halfH * 0.18, halfH * 0.08, halfH * 0.08)
+end
+
+local function drawAlienSpeedy(alien, x, y, w, h, color, alpha)
+  local cx, cy = x + w / 2, y + h / 2
+  local halfW, halfH = w / 2, h / 2
+
+  love.graphics.setColor(color[1], color[2], color[3], alpha)
+  drawNormalizedPolygon(SPEEDY_FUSELAGE, cx, cy, halfW * 0.9, halfH)
+
+  local lr, lg, lb = shadeColor(color, 0.22)
+  love.graphics.setColor(lr, lg, lb, alpha)
+  drawNormalizedPolygon(SPEEDY_WING, cx, cy + halfH * 0.15, halfW, halfH)
+  local mirrored = {}
+  for i = 1, #SPEEDY_WING do
+    local point = SPEEDY_WING[i]
+    mirrored[i] = { -point[1], point[2] }
+  end
+  drawNormalizedPolygon(mirrored, cx, cy + halfH * 0.15, halfW, halfH)
+
+  love.graphics.setColor(0, 0, 0, alpha)
+  love.graphics.circle("fill", cx, cy - halfH * 0.3, halfH * 0.14)
+
+  local trailAlpha = alpha * 0.35
+  love.graphics.setColor(color[1], color[2], color[3], trailAlpha)
+  for i = 1, 3 do
+    local offset = halfH * (0.4 + i * 0.2)
+    love.graphics.ellipse("fill", cx, cy + offset, halfW * 0.35, halfH * 0.12)
+  end
+end
+
+local function drawAlienSniper(alien, x, y, w, h, color, alpha)
+  local cx, cy = x + w / 2, y + h / 2
+  local halfW, halfH = w / 2, h / 2
+
+  love.graphics.setColor(color[1], color[2], color[3], alpha)
+  drawNormalizedPolygon(SNIPER_CORE, cx, cy, halfW, halfH)
+
+  local lr, lg, lb = shadeColor(color, 0.18)
+  love.graphics.setColor(lr, lg, lb, alpha)
+  drawNormalizedPolygon(SNIPER_SCOPE, cx, cy - halfH * 0.1, halfW * 0.8, halfH * 0.85)
+
+  love.graphics.setColor(1, 1, 1, alpha * 0.7)
+  love.graphics.circle("line", cx, cy - halfH * 0.35, halfH * 0.35)
+  love.graphics.line(cx - halfW * 0.45, cy - halfH * 0.35, cx + halfW * 0.45, cy - halfH * 0.35)
+  love.graphics.line(cx, cy - halfH * 0.8, cx, cy + halfH * 0.1)
+end
+
+local function drawAlienGhost(alien, x, y, w, h, color, alpha)
+  local cx, cy = x + w / 2, y + h / 2
+  local halfW, halfH = w / 2, h / 2
+
+  local baseAlpha = alpha * 0.85
+  love.graphics.setColor(color[1], color[2], color[3], baseAlpha)
+  drawNormalizedPolygon(GHOST_HULL, cx, cy, halfW, halfH)
+
+  local wave = math.sin((alien.phaseTimer or 0) * 4 + cx * 0.02) * 0.08
+  local lr, lg, lb = shadeColor(color, 0.15)
+  love.graphics.setColor(lr, lg, lb, baseAlpha * 0.8)
+  love.graphics.polygon("fill",
+    cx - halfW * 0.75, cy + halfH * 0.4 + wave * halfH,
+    cx - halfW * 0.45, cy + halfH * 0.85 - wave * halfH,
+    cx, cy + halfH * 0.5 + wave * halfH,
+    cx + halfW * 0.45, cy + halfH * 0.85 - wave * halfH,
+    cx + halfW * 0.75, cy + halfH * 0.4 + wave * halfH
+  )
+
+  if alien.isPhased then
+    love.graphics.setColor(color[1], color[2], color[3], baseAlpha * 0.35)
+    love.graphics.circle("fill", cx, cy, math.min(halfW, halfH))
+  end
+
+  love.graphics.setColor(0, 0, 0, baseAlpha * 0.9)
+  love.graphics.circle("fill", cx - halfW * 0.25, cy - halfH * 0.1, halfH * 0.12)
+  love.graphics.circle("fill", cx + halfW * 0.25, cy - halfH * 0.1, halfH * 0.12)
+end
+
+local alienDrawers = {
+  basic = drawAlienBasic,
+  tank = drawAlienTank,
+  speedy = drawAlienSpeedy,
+  sniper = drawAlienSniper,
+  ghost = drawAlienGhost
+}
+
+local function fireAlienPattern(alien, worldX, worldY, playerX, playerY)
+  local variant = alien and alien.variant or "basic"
+  local baseSpeed = 320
+  if variant == "tank" then
+    local pelletSpeed = baseSpeed * 0.85
+    local spreads = { -120, 0, 120 }
+    for _, dx in ipairs(spreads) do
+      Bullets.spawn(worldX, worldY, pelletSpeed, 'enemy', 1, dx)
+    end
+    return 0.15
+  elseif variant == "speedy" then
+    local dx = ((math.random() < 0.5) and -1 or 1) * 140
+    Bullets.spawn(worldX, worldY, baseSpeed * 1.05, 'enemy', 1, dx)
+    return 0
+  elseif variant == "sniper" then
+    local targetX = playerX or worldX
+    local targetY = playerY or (worldY + 240)
+    local dirX = targetX - worldX
+    local dirY = targetY - worldY
+    local len = math.sqrt(dirX * dirX + dirY * dirY)
+    if len < 1e-4 then
+      dirX, dirY = 0, 1
+    else
+      dirX, dirY = dirX / len, dirY / len
+    end
+    local speed = baseSpeed * 1.2
+    if dirY < 0.1 then dirY = 0.1 end
+    Bullets.spawn(worldX, worldY, speed * dirY, 'enemy', 1, speed * dirX)
+    return 0.1
+  elseif variant == "ghost" then
+    local drift = math.sin((alien.phaseTimer or 0) * 2) * 80
+    Bullets.spawn(worldX, worldY, baseSpeed * 0.7, 'enemy', 1, drift)
+    return 0
+  else
+    Bullets.spawn(worldX, worldY, baseSpeed, 'enemy', 1)
+    return 0
+  end
+end
+
+-- Enemy behavior patterns
+local behaviors = {
+  march = function(alien, dt)
+    -- Standard marching behavior - handled by formation movement
+  end,
+  
+  zigzag = function(alien, dt)
+    -- Zigzag movement for individual aliens
+    alien.zigzagPhase = (alien.zigzagPhase or 0) + dt * 3
+    alien.xOffset = math.sin(alien.zigzagPhase) * 20
+  end,
+  
+  phase = function(alien, dt)
+    -- Phasing behavior - chance to avoid damage
+    alien.phaseTimer = (alien.phaseTimer or 0) + dt
+    alien.isPhased = (math.floor(alien.phaseTimer * 2) % 2) == 1
+  end
+}
 
 local function resetAliens()
   formation.aliens = {}
   for r = 1, formation.rows do
     formation.aliens[r] = {}
     for c = 1, formation.cols do
-      formation.aliens[r][c] = { alive = true, x = (c-1)*formation.spacingX, y = (r-1)*formation.spacingY, w = ALIEN_W, h = ALIEN_H, score = 10 }
+      local variantType = "basic"
+      -- Reduced variant spawn rates for better balance
+      if math.random() < 0.08 then variantType = "tank" -- Reduced from 0.2
+      elseif math.random() < 0.06 then variantType = "speedy" -- Reduced from 0.15
+      elseif math.random() < 0.04 then variantType = "sniper" -- Reduced from 0.1
+      elseif math.random() < 0.02 then variantType = "ghost" -- Reduced from 0.05
+      end
+      
+      local variant = Constants.ALIEN_VARIANTS[variantType]
+      local alien = {
+        alive = true,
+        x = (c-1)*formation.spacingX,
+        y = (r-1)*formation.spacingY,
+        w = ALIEN_W * variant.size,
+        h = ALIEN_H * variant.size,
+        variant = variantType,
+        health = variant.health,
+        maxHealth = variant.health,
+        score = variant.score,
+        zigzagPhase = math.random() * math.pi * 2,
+        phaseTimer = 0,
+        xOffset = 0,
+        isPhased = false
+      }
+      formation.aliens[r][c] = alien
     end
   end
 end
@@ -65,8 +347,27 @@ local function computeBounds()
 end
 
 function Aliens.update(dt)
+  -- Apply time warp effect
+  local Events = require("src.game.events")
+  local timeFactor = Events.getTimeWarpFactor()
+  local adjustedDt = dt * timeFactor
+  
+  -- Update individual alien behaviors
+  for r = 1, formation.rows do
+    for c = 1, formation.cols do
+      local alien = formation.aliens[r][c]
+      if alien.alive then
+        local variant = Constants.ALIEN_VARIANTS[alien.variant]
+        local behavior = behaviors[variant.behavior]
+        if behavior then
+          behavior(alien, adjustedDt)
+        end
+      end
+    end
+  end
+  
   -- March horizontally; step down on edges
-  formation.originX = formation.originX + formation.dir * formation.speed * dt
+  formation.originX = formation.originX + formation.dir * formation.speed * adjustedDt
   local left, right, bottom = computeBounds()
   local rightLimit = VIRTUAL_WIDTH - 24
   local leftLimit = 24
@@ -87,11 +388,38 @@ end
 function Aliens.draw()
   for r = 1, formation.rows do
     for c = 1, formation.cols do
-      local a = formation.aliens[r][c]
-      if a.alive then
-        local x, y, w, h = worldAABB(a)
-        love.graphics.setColor(1.0, 0.182, 0.651, 1.0) -- magenta
-        love.graphics.rectangle("fill", x, y, w, h, 4, 4)
+      local alien = formation.aliens[r][c]
+      if alien.alive then
+        local variant = Constants.ALIEN_VARIANTS[alien.variant]
+        local x, y, w, h = worldAABB(alien)
+        
+        -- Apply individual offset for behaviors
+        x = x + (alien.xOffset or 0)
+        
+        -- Draw alien with variant color and effects
+        local color = variant.color
+        local alpha = alien.isPhased and 0.45 or 1.0
+        local drawer = alienDrawers[alien.variant] or drawAlienBasic
+        drawer(alien, x, y, w, h, color, alpha)
+        
+        -- Draw health bar for multi-health aliens
+        if alien.health > 1 and alien.health < alien.maxHealth then
+          local barWidth = w * 0.8
+          local barHeight = 3
+          local barX = x + (w - barWidth) / 2
+          local barY = y - 8
+          
+          -- Background
+          love.graphics.setColor(0.2, 0.2, 0.2, 0.8)
+          love.graphics.rectangle("fill", barX, barY, barWidth, barHeight)
+          
+          -- Health fill
+          local healthPercent = alien.health / alien.maxHealth
+          love.graphics.setColor(1.0, 0.2, 0.2, 1.0)
+          love.graphics.rectangle("fill", barX, barY, barWidth * healthPercent, barHeight)
+        end
+
+        love.graphics.setColor(1, 1, 1, 1)
       end
     end
   end
@@ -104,7 +432,8 @@ function Aliens.getRandomAliveWorld()
       local a = formation.aliens[r][c]
       if a.alive then
         local x, y, w, h = worldAABB(a)
-        table.insert(alive, {x=x + w/2, y=y + h})
+        local offsetX = a.xOffset or 0
+        table.insert(alive, {alien = a, x = x + offsetX + w/2, y = y + h})
       end
     end
   end
@@ -112,18 +441,54 @@ function Aliens.getRandomAliveWorld()
   return alive[math.random(1, #alive)]
 end
 
+function Aliens.fireVariantShot(alien, worldX, worldY, playerX, playerY)
+  return fireAlienPattern(alien, worldX, worldY, playerX, playerY)
+end
+
 function Aliens.checkBulletCollision(bullet)
   if bullet.from ~= 'player' then return false end
+  
   for r = 1, formation.rows do
     for c = 1, formation.cols do
-      local a = formation.aliens[r][c]
-      if a.alive then
-        local x, y, w, h = worldAABB(a)
+      local alien = formation.aliens[r][c]
+      if alien.alive then
+        local variant = Constants.ALIEN_VARIANTS[alien.variant]
+        local x, y, w, h = worldAABB(alien)
+        
+        -- Apply individual offset for behaviors
+        x = x + (alien.xOffset or 0)
+        
         local dx = math.max(x - bullet.x, 0, bullet.x - (x + w))
         local dy = math.max(y - bullet.y, 0, bullet.y - (y + h))
+        
         if dx*dx + dy*dy <= (bullet.radius * bullet.radius) then
-          a.alive = false
-          return a.score
+          -- Check if this bullet can pierce this alien
+          local alienId = tostring(r) .. "," .. tostring(c)
+          if bullet.piercing > 0 and not Bullets.canPierce(bullet, alienId) then
+            return false -- Bullet already hit this alien or exceeded pierce limit
+          end
+          
+          -- Check for phasing
+          if alien.isPhased and variant.behavior == "phase" then
+            -- Ghost aliens have chance to phase through bullets
+            if math.random() < (variant.phaseChance or 0.3) then
+              return false -- Bullet passes through
+            end
+          end
+          
+          -- Apply damage
+          alien.health = alien.health - (bullet.damage or 1)
+          
+          -- Mark this alien as pierced by this bullet
+          Bullets.markPierced(bullet, alienId)
+          
+          if alien.health <= 0 then
+            alien.alive = false
+            return alien.score
+          else
+            -- Hit but not destroyed
+            return 0
+          end
         end
       end
     end
@@ -138,6 +503,23 @@ function Aliens.allCleared()
     end
   end
   return true
+end
+
+function Aliens.getAlienAtWorld(worldX, worldY)
+  for r = 1, formation.rows do
+    for c = 1, formation.cols do
+      local alien = formation.aliens[r][c]
+      if alien.alive then
+        local x, y, w, h = worldAABB(alien)
+        x = x + (alien.xOffset or 0)
+        
+        if worldX >= x and worldX <= x + w and worldY >= y and worldY <= y + h then
+          return alien
+        end
+      end
+    end
+  end
+  return nil
 end
 
 function Aliens.respawnFromConfig(cfg, playerY)
@@ -180,6 +562,47 @@ function Aliens.respawnFromConfig(cfg, playerY)
   formation.originY = math.floor(desiredOriginY + 0.5)
   formation.dir = (formation.dir == 0) and 1 or formation.dir -- ensure marching resumes after respawn
   resetAliens()
+end
+
+function Aliens.spawnReinforcement(variantType)
+  variantType = variantType or "basic"
+  
+  -- Find a valid spawn position at the top
+  local spawnRow = 1
+  local spawnCol = math.random(1, formation.cols)
+  
+  -- Check if position is available, if not try nearby columns
+  local attempts = 0
+  while attempts < formation.cols do
+    if not formation.aliens[spawnRow][spawnCol] or not formation.aliens[spawnRow][spawnCol].alive then
+      break
+    end
+    spawnCol = (spawnCol % formation.cols) + 1
+    attempts = attempts + 1
+  end
+  
+  if attempts < formation.cols then
+    local variant = Constants.ALIEN_VARIANTS[variantType]
+    local alien = {
+      alive = true,
+      x = (spawnCol-1)*formation.spacingX,
+      y = (spawnRow-1)*formation.spacingY,
+      w = ALIEN_W * variant.size,
+      h = ALIEN_H * variant.size,
+      variant = variantType,
+      health = variant.health * 1.5, -- Reinforcements are 50% tougher
+      maxHealth = variant.health * 1.5,
+      score = variant.score * 2, -- Double score for killing reinforcements
+      zigzagPhase = math.random() * math.pi * 2,
+      phaseTimer = 0,
+      xOffset = 0,
+      isPhased = false,
+      shootTimer = 0,
+      behavior = variant.behavior,
+      behaviorTimer = 0
+    }
+    formation.aliens[spawnRow][spawnCol] = alien
+  end
 end
 
 return Aliens

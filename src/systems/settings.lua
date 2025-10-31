@@ -31,4 +31,11 @@ function Settings.save()
   Save.saveLua('settings.lua', Settings.get())
 end
 
+function Settings.reset()
+  cached = nil
+  if love.filesystem.getInfo('settings.lua') then
+    love.filesystem.remove('settings.lua')
+  end
+end
+
 return Settings

@@ -2,13 +2,13 @@ local Title = {}
 
 local blink = 0
 local selected = 1
-local items = { "Start", "Cosmetics", "Settings", "Quit" }
+local items = { "Start", "Boss Gallery", "Upgrades", "Cosmetics", "Settings", "Quit" }
 
 local function layoutButtons(vw, vh)
   local btnH = 56
   local btnW = math.min(360, math.floor(vw * 0.6))
   local gapY = 16
-  local startY = math.floor(vh * 0.42)
+  local startY = math.floor(vh * 0.32)
   local rects = {}
   for i,_ in ipairs(items) do
     local x = math.floor((vw - btnW)/2 + 0.5)
@@ -56,7 +56,7 @@ function Title.draw(vw, vh)
   love.graphics.setFont(love.graphics.newFont(48))
   local title = "NEON INVADERS"
   local tw = love.graphics.getFont():getWidth(title)
-  love.graphics.print(title, (vw - tw) / 2, vh * 0.22)
+  love.graphics.print(title, (vw - tw) / 2, vh * 0.16)
 
   -- Vertical buttons
   local rects = layoutButtons(vw, vh)
@@ -78,7 +78,7 @@ function Title.draw(vw, vh)
   local os = (love.system and love.system.getOS) and love.system.getOS() or ""
   local prompt = (os == 'Android' or os == 'iOS') and "Tap to select" or "Up/Down to choose, Enter to confirm"
   love.graphics.setColor(1,1,1,0.9)
-  love.graphics.printf(prompt, 0, vh * 0.88, vw, 'center')
+  love.graphics.printf(prompt, 0, vh * 0.92, vw, 'center')
 end
 
 return Title

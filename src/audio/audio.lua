@@ -15,6 +15,7 @@ function Audio.load()
     explosion = Synth.beep(140, 0.16, 'triangle'),
     wave_cleared = Synth.beep(880, 0.18, 'sine'),
     boss_entrance = Synth.beep(300, 0.24, 'sine'),
+    health_bonus = Synth.beep(1320, 0.15, 'sine'), -- Higher pitch for health
   }
   for _, s in pairs(sounds) do s:setVolume(Settings.get().sfxVolume) end
   music = Synth.musicLoop()

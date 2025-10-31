@@ -56,6 +56,10 @@
             pkgs.unzip
             pkgs.ninja
             pkgs.android-tools # adb
+            pkgs.lua
+            pkgs.luaPackages.busted
+            pkgs.luaPackages.luacheck
+            pkgs.stylua
           ];
           ANDROID_SDK_ROOT = sdkRoot;
           ANDROID_HOME = sdkRoot;
