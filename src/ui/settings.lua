@@ -108,7 +108,7 @@ local function drawSlider(x, y, value, label, isSelected)
   
   -- Label - MUCH BIGGER AND CLEARER
   love.graphics.setFont(Fonts.get(36))
-  local labelW = labelFont:getWidth(label)
+  local labelW = love.graphics.getFont():getWidth(label)
   
   -- Multi-layer shadow for MAXIMUM visibility
   love.graphics.setColor(0, 0, 0, 1)
