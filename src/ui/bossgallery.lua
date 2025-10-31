@@ -358,23 +358,7 @@ function BossGallery.pointerReleased(vw, vh, lx, ly)
   return nil
 end
 
-function BossGallery.touchpressed(id, x, y, dx, dy, pressure)
-  local vw, vh = love.graphics.getWidth(), love.graphics.getHeight()
-  local lx, ly = x, y -- Use raw coordinates since pointerPressed expects virtual coords
-  return BossGallery.pointerPressed(vw, vh, lx, ly)
-end
 
-function BossGallery.touchmoved(id, x, y, dx, dy, pressure)
-  local vw, vh = love.graphics.getWidth(), love.graphics.getHeight()
-  local lx, ly = x, y
-  return BossGallery.pointerMoved(vw, vh, lx, ly)
-end
-
-function BossGallery.touchreleased(id, x, y, dx, dy, pressure)
-  local vw, vh = love.graphics.getWidth(), love.graphics.getHeight()
-  local lx, ly = x, y
-  return BossGallery.pointerReleased(vw, vh, lx, ly)
-end
 
 function BossGallery.draw(vw, vh)
   -- Background
