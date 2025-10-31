@@ -159,9 +159,11 @@ local function drawShapeItem(layout, item, index, isSelected, displayIndex)
   love.graphics.setColor(0.5, 0.7, 1.0, 1.0)
   love.graphics.rectangle("line", rect.x, rect.y, rect.w, rect.h, 8, 8)
   
-  -- Shape preview (use current color, larger size for better visibility)
+  -- Shape preview (use player proportions for preview consistency)
   love.graphics.setColor(Cosmetics.getColor())
-  Cosmetics.drawSpecificShape(item.id, rect.x + 50, rect.y + rect.h/2, 40, 40)
+  local previewWidth = Constants.PLAYER.width * 1.4
+  local previewHeight = Constants.PLAYER.height * 1.4
+  Cosmetics.drawSpecificShape(item.id, rect.x + 50, rect.y + rect.h/2, previewWidth, previewHeight)
   
   -- Text
   love.graphics.setColor(1, 1, 1, 1)

@@ -157,11 +157,14 @@ function HUD.draw(score, lives, wave, vw, vh)
   love.graphics.print("CREDITS", s2X, 10)
   
   love.graphics.setFont(valueFont)
-  local creditsText = tostring(credits)
-  
-  -- Just use the same gold - no shine, perfectly matching
   love.graphics.setColor(goldR, goldG, goldB, 1)
+  local creditsText = tostring(credits)
   love.graphics.print(creditsText, s2X, 24)
+  local multiplier = Economy.getCreditMultiplier()
+  local multiplierText = string.format("x%d", multiplier or 1)
+  local multFont = love.graphics.newFont(16)
+  love.graphics.setFont(multFont)
+  love.graphics.print(multiplierText, s2X + valueFont:getWidth(creditsText) + 12, 30)
   
   -- ===== SECTION 3: LIVES (turns red at 1) =====
   local s3X = sectionW * 2 + padding

@@ -128,6 +128,7 @@ Constants.ECONOMY = {
   scoreToCreditsRate = 0.01, -- 1% of score converted to credits
   bossKillBonus = 1000, -- 10x bonus for killing boss (was 100)
   specialAlienBonus = 25, -- Bonus for killing special aliens
+  creditBonusInterval = 50, -- Waves per credit multiplier increase
   
   -- Upgrade costs and effects (ordered by accessibility)
   upgrades = {
@@ -233,34 +234,34 @@ Constants.ECONOMY = {
     },
     shapes = {
       triangle = {
-        name = "Triangle",
+        name = "Striker",
         cost = 0, -- Free default
-        description = "Classic triangle ship"
+        description = "Aggressive delta-wing fighter"
       },
       diamond = {
-        name = "Diamond",
+        name = "Vanguard",
         cost = 400,
-        description = "Sleek diamond shape"
+        description = "Armored spearhead cruiser"
       },
       hexagon = {
-        name = "Hexagon",
+        name = "Aegis",
         cost = 800,
-        description = "Hexagonal ship design"
+        description = "Shielded heavy gunship"
       },
       arrow = {
-        name = "Arrow",
+        name = "Raptor",
         cost = 600,
-        description = "Sharp arrow shape"
+        description = "Swift interceptor frame"
       },
       circle = {
-        name = "Circle",
+        name = "Orbiter",
         cost = 1000,
-        description = "Compact circular ship"
+        description = "Refined drone platform"
       },
       star = {
-        name = "Star",
+        name = "Nova",
         cost = 1600,
-        description = "Five-pointed star ship"
+        description = "Experimental starburst craft"
       }
     }
   }

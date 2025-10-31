@@ -8,6 +8,7 @@ local Banner = require("src.ui.banner")
 local Boss = require("src.game.boss")
 local Upgrades = require("src.game.upgrades")
 local Cosmetics = require("src.systems.cosmetics")
+local Economy = require("src.systems.economy")
 -- No powerup module in economy system
 local Events = require("src.game.events")
 local scaling = require("src.systems.scaling")
@@ -26,10 +27,19 @@ local pendingNextCfg = nil
 local bossSpawned = false
 local waveGraceTimer = 0
 
+local function setWave(newWave, announceBonus)
+  wave = math.max(newWave, 1)
+  local multiplierChanged = Economy.updateCreditMultiplier(wave)
+  if announceBonus and multiplierChanged and Economy.getCreditMultiplier() > 1 then
+    local bonus = Economy.getCreditMultiplier()
+    local milestoneWave = Economy.getCreditMilestoneWave()
+    Banner.trigger(string.format("Credit Bonus x%d unlocked! (Wave %d)", bonus, milestoneWave))
+  end
+end
+
 function Game.init(vw, vh)
   VIRTUAL_WIDTH, VIRTUAL_HEIGHT = vw or 1280, vh or 720
   score = 0
-  wave = 1
   isGameOver = false
   local _, center, _ = scaling.getPanelsVirtual()
   Player.init(center.w, center.h)
@@ -40,6 +50,7 @@ function Game.init(vw, vh)
   Particles.init()
   enemyFireCooldown = 0
   -- Apply difficulty-based player bonus lives for Easy
+  setWave(1, false)
   local cfg = require('src.game.waves').configFor(wave)
   if cfg.playerLivesBonus and cfg.playerLivesBonus > 0 then
     Player.lives = Player.lives + cfg.playerLivesBonus
@@ -67,6 +78,9 @@ function Game.update(dt, input)
   if Boss.exists() then Boss.update(dt) end
 
   local bottom = Aliens.update(dt)
+  local px, py, pw, ph = Player.getAABB()
+  local playerCenterX = px + pw/2
+  local playerCenterY = py + ph/2
 
   -- Collisions: bullets vs aliens (and boss)
   Bullets.eachActive(function(bullet)
@@ -107,7 +121,6 @@ function Game.update(dt, input)
         Screenshake.add(0.08, 4)
         require('src.audio.audio').play('hit')
         -- Award credits for alien kill (got contains the score value)
-        local Economy = require("src.systems.economy")
         local credits = 10 -- Base credits
         
         -- Check if this was a special alien by looking at the score value
@@ -136,21 +149,20 @@ function Game.update(dt, input)
   while enemyFireCooldown <= 0 do
     local shooter = Aliens.getRandomAliveWorld()
     if not shooter then break end
-    
+    local alienInfo = shooter.alien
+
     -- Check if shooter is sniper variant for increased fire rate
-    local alienInfo = Aliens.getAlienAtWorld(shooter.x, shooter.y)
     local fireRateBonus = 0
     if alienInfo and alienInfo.variant == "sniper" then
-      local variant = require("src.config.constants").ALIEN_VARIANTS.sniper
+      local variant = Constants.ALIEN_VARIANTS.sniper
       fireRateBonus = variant.fireRateBonus or 0
     end
-    
-    Bullets.spawn(shooter.x, shooter.y + 8, 320, 'enemy', 1)
-    enemyFireCooldown = enemyFireCooldown + (1 / (enemyFireRate + fireRateBonus))
+
+    local extraDelay = Aliens.fireVariantShot(alienInfo, shooter.x, shooter.y + 8, playerCenterX, playerCenterY) or 0
+    enemyFireCooldown = enemyFireCooldown + (1 / (enemyFireRate + fireRateBonus)) + extraDelay
   end
 
   -- Collisions: enemy bullets vs player
-  local px, py, pw, ph = Player.getAABB()
   Bullets.eachActive(function(b)
     if b.from == 'enemy' then
       if Player.isVulnerable() then
@@ -282,7 +294,7 @@ function Game.update(dt, input)
       if intermissionPending then
         -- Brief pause after boss defeat before next wave
         if intermissionPending and pendingNextCfg then
-          wave = wave + 1
+          setWave(wave + 1, true)
           Bullets.clear('enemy')
           Aliens.respawnFromConfig(pendingNextCfg, Player.y)
           intermissionPending = false
@@ -304,7 +316,7 @@ function Game.update(dt, input)
     if Aliens.allCleared() then
       if not intermissionPending then
         Banner.trigger("WAVE CLEARED!")
-        wave = wave + 1
+        setWave(wave + 1, true)
         local nextCfg = Waves.configFor(wave)
         Bullets.clear('enemy')
         Aliens.respawnFromConfig(nextCfg, Player.y)
@@ -312,7 +324,7 @@ function Game.update(dt, input)
       else
         -- Intermission already shown previously; wait for apply
         if not Upgrades.isShowing() and pendingNextCfg then
-          wave = wave + 1
+          setWave(wave + 1, true)
           Bullets.clear('enemy')
           Aliens.respawnFromConfig(pendingNextCfg, Player.y)
           intermissionPending = false

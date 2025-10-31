@@ -236,18 +236,22 @@ function UpgradeMenu.draw()
       love.graphics.setColor(0.5, 1.0, 0.5, 1)
       love.graphics.setFont(love.graphics.newFont(18))
       love.graphics.printf("MAXED", costX, costY, 120, "center")
-    elseif info.canPurchase then
-      love.graphics.setColor(1.0, 1.0, 0.5, 1)
+    else
+      local missingCredits = math.max(0, (info.cost or 0) - credits)
+      if info.canPurchase then
+        love.graphics.setColor(1.0, 1.0, 0.5, 1)
+      else
+        love.graphics.setColor(1.0, 0.5, 0.5, 1)
+      end
       love.graphics.setFont(love.graphics.newFont(14))
-      love.graphics.printf("Cost:", costX, costY, 120, "center")
+      love.graphics.printf("Cost", costX, costY, 120, "center")
       love.graphics.setFont(love.graphics.newFont(18))
       love.graphics.printf(info.cost, costX, costY + 20, 120, "center")
-    else
-      love.graphics.setColor(1.0, 0.5, 0.5, 1)
-      love.graphics.setFont(love.graphics.newFont(14))
-      love.graphics.printf("Insufficient", costX, costY, 120, "center")
-      love.graphics.setFont(love.graphics.newFont(12))
-      love.graphics.printf("Credits", costX, costY + 20, 120, "center")
+      if not info.canPurchase then
+        love.graphics.setColor(1.0, 0.7, 0.7, 1)
+        love.graphics.setFont(love.graphics.newFont(12))
+        love.graphics.printf("Need +" .. missingCredits, costX, costY + 40, 120, "center")
+      end
     end
   end
   

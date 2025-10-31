@@ -12,7 +12,10 @@ local state = {
     multiShot = 0,
     piercing = 0,
     speed = 0
-  }
+  },
+  creditMultiplier = 1,
+  currentWave = 1,
+  creditMilestoneWave = 0
 }
 
 -- Initialize economy system
@@ -30,6 +33,9 @@ function Economy.init()
       speed = 0
     }
   end
+  state.creditMultiplier = 1
+  state.currentWave = state.currentWave or 1
+  state.creditMilestoneWave = state.creditMilestoneWave or 0
 end
 
 -- Save economy data
@@ -43,9 +49,14 @@ end
 
 -- Add credits to player's balance
 function Economy.addCredits(amount)
-  state.credits = state.credits + amount
-  state.totalCreditsEarned = state.totalCreditsEarned + amount
+  amount = math.floor(amount or 0)
+  if amount <= 0 then return 0 end
+  local multiplier = state.creditMultiplier or 1
+  local finalAmount = amount * multiplier
+  state.credits = state.credits + finalAmount
+  state.totalCreditsEarned = state.totalCreditsEarned + finalAmount
   Economy.save()
+  return finalAmount
 end
 
 -- Spend credits (returns true if successful)
@@ -72,19 +83,19 @@ end
 function Economy.convertScore(score)
   local credits = math.floor(score * Constants.ECONOMY.scoreToCreditsRate)
   if credits > 0 then
-    Economy.addCredits(credits)
+    return Economy.addCredits(credits)
   end
-  return credits
+  return 0
 end
 
 -- Award boss kill bonus
 function Economy.awardBossKill()
-  Economy.addCredits(Constants.ECONOMY.bossKillBonus)
+  return Economy.addCredits(Constants.ECONOMY.bossKillBonus)
 end
 
 -- Award special alien kill bonus
 function Economy.awardSpecialAlienKill()
-  Economy.addCredits(Constants.ECONOMY.specialAlienBonus)
+  return Economy.addCredits(Constants.ECONOMY.specialAlienBonus)
 end
 
 -- Get upgrade level
@@ -186,7 +197,10 @@ function Economy.reset()
       multiShot = 0,
       piercing = 0,
       speed = 0
-    }
+    },
+    creditMultiplier = 1,
+    currentWave = 1,
+    creditMilestoneWave = 0
   }
   -- Also delete the save file to prevent reloading
   if love.filesystem.getInfo("economy") then
@@ -197,6 +211,37 @@ end
 -- Debug function to add credits (remove in production)
 function Economy.debugAddCredits(amount)
   Economy.addCredits(amount)
+end
+
+function Economy.updateCreditMultiplier(wave)
+  local interval = Constants.ECONOMY.creditBonusInterval or 50
+  state.currentWave = math.max(wave or state.currentWave or 1, 1)
+  local tier = math.floor(state.currentWave / interval)
+  local newMultiplier = math.max(1, 1 + tier)
+  local milestoneWave = math.max(tier * interval, 0)
+  local changed = newMultiplier ~= state.creditMultiplier
+  state.creditMultiplier = newMultiplier
+  state.creditMilestoneWave = milestoneWave
+  return changed, milestoneWave
+end
+
+function Economy.getCreditMultiplier()
+  return state.creditMultiplier or 1
+end
+
+function Economy.getCreditMilestoneWave()
+  return state.creditMilestoneWave or 0
+end
+
+function Economy.getNextCreditMilestoneWave()
+  local interval = Constants.ECONOMY.creditBonusInterval or 50
+  local currentWave = state.currentWave or 1
+  local nextTier = math.floor(currentWave / interval) + 1
+  return nextTier * interval
+end
+
+function Economy.getCreditBonusInterval()
+  return Constants.ECONOMY.creditBonusInterval or 50
 end
 
 return Economy
