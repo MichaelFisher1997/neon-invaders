@@ -1,4 +1,5 @@
 local Settings = require("src.systems.settings")
+local Fonts = require("src.ui.fonts")
 
 local UISettings = {}
 
