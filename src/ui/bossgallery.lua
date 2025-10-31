@@ -240,18 +240,7 @@ function BossGallery.pointerPressed(vw, vh, lx, ly)
     return 'title'
   end
   
-  -- Initialize touch scrolling for boss list area
-  local cardX = 20
-  local cardWidth = 300
-  local cardStartY = 80
-  if lx >= cardX and lx <= cardX + cardWidth and ly >= cardStartY then
-    touchStartY = ly
-    touchStartTime = love.timer.getTime()
-    isDragging = true
-    scrollVelocity = 0
-  end
-  
-  -- Check boss cards
+  -- Check boss cards first (for selection)
   local cardX = 20
   local cardWidth = 300
   local cardHeight = 110  -- Match drawing height
@@ -268,6 +257,35 @@ function BossGallery.pointerPressed(vw, vh, lx, ly)
     end
   end
   
+  -- Initialize touch tracking for boss list area (but not on cards)
+  local listAreaX = 20
+  local listAreaWidth = 300
+  local listAreaStartY = 80
+  local cardTapped = false
+  
+  -- Check if we tapped on a card first
+  local cardX = 20
+  local cardWidth = 300
+  local cardHeight = 110
+  local cardStartY = 80 + scroll
+  for i, info in ipairs(bossInfo) do
+    local cardY = cardStartY + (i - 1) * 120
+    local card = {x = cardX, y = cardY, w = cardWidth, h = cardHeight}
+    if lx >= card.x and lx <= card.x + card.w and
+       ly >= card.y and ly <= card.y + card.h then
+      cardTapped = true
+      break
+    end
+  end
+  
+  -- Only start touch tracking if we didn't tap on a card
+  if not cardTapped and lx >= listAreaX and lx <= listAreaX + listAreaWidth and ly >= listAreaStartY then
+    touchStartY = ly
+    touchStartTime = love.timer.getTime()
+    isDragging = false  -- Don't start dragging immediately
+    scrollVelocity = 0
+  end
+  
   return nil
 end
 
@@ -276,45 +294,60 @@ local touchStartY = nil
 local touchStartTime = nil
 local scrollVelocity = 0
 local isDragging = false
+local dragThreshold = 10  -- Minimum movement to start scrolling
 
 function BossGallery.pointerMoved(vw, vh, lx, ly)
-  if touchStartY and isDragging then
+  if touchStartY then
     local deltaY = ly - touchStartY
-    scroll = scroll + deltaY
     
-    -- Apply boundaries
-    local cardHeight = 120
-    local visibleCards = 5
-    local listHeight = #bossInfo * cardHeight
-    local maxScroll = 0
-    local minScroll = -math.max(0, listHeight - visibleCards * cardHeight)
-    scroll = math.max(minScroll, math.min(maxScroll, scroll))
+    -- Check if we've moved enough to start scrolling
+    if not isDragging and math.abs(deltaY) > dragThreshold then
+      isDragging = true
+    end
     
-    touchStartY = ly
-    scrollVelocity = deltaY  -- Track velocity for momentum
+    if isDragging then
+      scroll = scroll + deltaY
+      
+      -- Apply boundaries
+      local cardHeight = 120
+      local visibleCards = 5
+      local listHeight = #bossInfo * cardHeight
+      local maxScroll = 0
+      local minScroll = -math.max(0, listHeight - visibleCards * cardHeight)
+      scroll = math.max(minScroll, math.min(maxScroll, scroll))
+      
+      touchStartY = ly
+      scrollVelocity = deltaY  -- Track velocity for momentum
+    end
   end
   return nil
 end
 
 function BossGallery.pointerReleased(vw, vh, lx, ly)
   if touchStartY then
-    -- Apply momentum based on scroll velocity
     local touchDuration = love.timer.getTime() - (touchStartTime or 0)
-    if touchDuration < 0.3 and math.abs(scrollVelocity) > 50 then
-      -- Quick swipe - apply momentum
-      targetScroll = scroll + scrollVelocity * 0.5
-    else
-      -- Slow drag - snap to position
-      targetScroll = scroll
-    end
     
-    -- Apply boundaries to target
-    local cardHeight = 120
-    local visibleCards = 5
-    local listHeight = #bossInfo * cardHeight
-    local maxScroll = 0
-    local minScroll = -math.max(0, listHeight - visibleCards * cardHeight)
-    targetScroll = math.max(minScroll, math.min(maxScroll, targetScroll))
+    if not isDragging and touchDuration < 0.3 then
+      -- This was a tap, not a drag - let the original card selection logic handle it
+      -- Don't interfere with tap selection
+    else
+      -- This was a drag - apply momentum based on scroll velocity
+      if touchDuration < 0.3 and math.abs(scrollVelocity) > 50 then
+        -- Quick swipe - apply momentum
+        targetScroll = scroll + scrollVelocity * 0.5
+      else
+        -- Slow drag - snap to position
+        targetScroll = scroll
+      end
+      
+      -- Apply boundaries to target
+      local cardHeight = 120
+      local visibleCards = 5
+      local listHeight = #bossInfo * cardHeight
+      local maxScroll = 0
+      local minScroll = -math.max(0, listHeight - visibleCards * cardHeight)
+      targetScroll = math.max(minScroll, math.min(maxScroll, targetScroll))
+    end
   end
   
   touchStartY = nil
