@@ -3,6 +3,8 @@ local InputMode = {}
 local mode = "touch" -- Default to touch for mobile
 local hasKeyboard = false
 local hasTouch = false
+local touchDelayTimer = 0
+local touchDelayDuration = 0.5 -- 0.5 second delay after screen transitions
 
 function InputMode.init()
   -- Check for touch capabilities
@@ -29,6 +31,20 @@ function InputMode.onTouchPressed()
   if not hasKeyboard then
     mode = "touch"
   end
+end
+
+function InputMode.setTouchDelay()
+  touchDelayTimer = touchDelayDuration
+end
+
+function InputMode.update(dt)
+  if touchDelayTimer > 0 then
+    touchDelayTimer = touchDelayTimer - dt
+  end
+end
+
+function InputMode.isTouchDelayed()
+  return touchDelayTimer > 0
 end
 
 function InputMode.getMode()

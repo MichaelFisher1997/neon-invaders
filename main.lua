@@ -115,15 +115,19 @@ function handleUIAction(action, curState)
     elseif action == "Upgrades" then
       services.state.set("upgradeMenu")
       services.upgradeMenu.init()
+      services.inputMode.setTouchDelay() -- Prevent accidental touches
     elseif action == "Boss Gallery" then
       services.bossGallery.enter()
       services.state.setWithDelay("bossGallery")
+      services.inputMode.setTouchDelay() -- Prevent accidental touches
     elseif action == "Cosmetics" then
       services.cosmeticsUI.enter()
       services.state.setWithDelay("cosmetics")
+      services.inputMode.setTouchDelay() -- Prevent accidental touches
     elseif action == "Settings" then
       services.settingsUI.enter()
       services.state.setWithDelay("settings")
+      services.inputMode.setTouchDelay() -- Prevent accidental touches
     elseif action == "Quit" then
       love.event.quit()
     end
@@ -143,16 +147,19 @@ function handleUIAction(action, curState)
       services.settings.save()
       services.state.set("title")
       services.title.enter()
+      services.inputMode.setTouchDelay() -- Prevent accidental touches
     end
   elseif curState == "cosmetics" then
     if action == 'back' then
       services.state.set("title")
       services.title.enter()
+      services.inputMode.setTouchDelay() -- Prevent accidental touches
     end
   elseif curState == "bossGallery" then
     if action == 'title' then
       services.state.set("title")
       services.title.enter()
+      services.inputMode.setTouchDelay() -- Prevent accidental touches
     end
   elseif curState == "pause" then
     if action == 'resume' then
@@ -164,6 +171,7 @@ function handleUIAction(action, curState)
     elseif action == 'quit' then
       services.state.set("title")
       services.title.enter()
+      services.inputMode.setTouchDelay() -- Prevent accidental touches
     end
   end
 end
@@ -193,6 +201,12 @@ end
 
 function love.touchpressed(id, x, y, dx, dy, pressure)
   services.inputMode.onTouchPressed()
+  
+  -- Check if touch is delayed (prevent accidental touches after screen transitions)
+  if services.inputMode.isTouchDelayed() then
+    return
+  end
+  
   local vx, vy = services.scaling.toVirtual(x, y)
   local vw, vh = services.scaling.getVirtualSize()
   local curState = services.state.get()
@@ -221,6 +235,7 @@ function love.update(dt)
   services.screenshake.update(dt)
   services.audio.update()
   services.tutorial.update(dt)
+  services.inputMode.update(dt)
   services.state.update(dt)
   
   local cur = services.state.get()

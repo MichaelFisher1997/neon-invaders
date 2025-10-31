@@ -1,5 +1,6 @@
 local Highscores = require("src.systems.highscores")
 local Fonts = require("src.ui.fonts")
+local InputMode = require("src.core.inputmode")
 
 local GameOver = {}
 
@@ -14,6 +15,7 @@ local options = {
 function GameOver.enter()
   submitted = false
   selected = 1
+  InputMode.setTouchDelay() -- Prevent accidental touches
 end
 
 local function layoutButtons(vw, vh)
