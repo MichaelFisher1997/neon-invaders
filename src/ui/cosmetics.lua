@@ -466,62 +466,8 @@ function UICosmetics.pointerPressed(vw, vh, lx, ly)
     return 'back'
   end
   
-  -- Check item clicks
-  if state.tab == "colors" then
-    local colors = getColors()
-    local startIndex = state.colorScroll + 1
-    local endIndex = math.min(startIndex + layout.items.visibleCount - 1, #colors)
-    
-    for displayIndex = startIndex, endIndex do
-      local actualIndex = displayIndex
-      local y = layout.items.startY + (displayIndex - startIndex) * (layout.items.height + layout.items.spacing)
-      if lx >= layout.items.x and lx <= layout.items.x + layout.items.width and
-         ly >= y and ly <= y + layout.items.height then
-        state.colorSelection = actualIndex
-        audio.play('ui_click')
-        
-        local color = colors[actualIndex]
-        if color and Cosmetics.isColorUnlocked(color.id) then
-          Cosmetics.selectColor(color.id)
-          showMessage("Color equipped!")
-        else
-          local success, message = Cosmetics.purchaseColor(color.id)
-          showMessage(message)
-          if not success then
-            audio.play('hit')
-          end
-        end
-        break
-      end
-    end
-  else
-    local shapes = getShapes()
-    local startIndex = state.shapeScroll + 1
-    local endIndex = math.min(startIndex + layout.items.visibleCount - 1, #shapes)
-    
-    for displayIndex = startIndex, endIndex do
-      local actualIndex = displayIndex
-      local y = layout.items.startY + (displayIndex - startIndex) * (layout.items.height + layout.items.spacing)
-      if lx >= layout.items.x and lx <= layout.items.x + layout.items.width and
-         ly >= y and ly <= y + layout.items.height then
-        state.shapeSelection = actualIndex
-        audio.play('ui_click')
-        
-        local shape = shapes[actualIndex]
-        if shape and Cosmetics.isShapeUnlocked(shape.id) then
-          Cosmetics.selectShape(shape.id)
-          showMessage("Shape equipped!")
-        else
-          local success, message = Cosmetics.purchaseShape(shape.id)
-          showMessage(message)
-          if not success then
-            audio.play('hit')
-          end
-        end
-        break
-      end
-    end
-  end
+  -- Don't check item clicks in pointerPressed - let pointerMoved handle tap vs drag
+  -- This prevents accidental selections during swipe gestures
   
   -- Initialize touch scrolling for item list area
   if lx >= layout.items.x and lx <= layout.items.x + layout.items.width and
@@ -577,7 +523,68 @@ end
 function UICosmetics.pointerReleased(vw, vh, lx, ly)
   if touchStartY then
     local touchDuration = love.timer.getTime() - (touchStartTime or 0)
-    if touchDuration < 0.3 and math.abs(scrollVelocity) > 50 then
+    
+    -- Check if this was a tap (not a drag)
+    if not isDragging and touchDuration < 0.3 and touchDuration > 0.05 then
+      -- This was a tap - check what was tapped
+      local layout = getLayout(vw, vh)
+      
+      if state.tab == "colors" then
+        local colors = getColors()
+        local startIndex = state.colorScroll + 1
+        local endIndex = math.min(startIndex + layout.items.visibleCount - 1, #colors)
+        
+        for displayIndex = startIndex, endIndex do
+          local actualIndex = displayIndex
+          local y = layout.items.startY + (displayIndex - startIndex) * (layout.items.height + layout.items.spacing)
+          if lx >= layout.items.x and lx <= layout.items.x + layout.items.width and
+             ly >= y and ly <= y + layout.items.height then
+            state.colorSelection = actualIndex
+            audio.play('ui_click')
+            
+            local color = colors[actualIndex]
+            if color and Cosmetics.isColorUnlocked(color.id) then
+              Cosmetics.selectColor(color.id)
+              showMessage("Color equipped!")
+            else
+              local success, message = Cosmetics.purchaseColor(color.id)
+              showMessage(message)
+              if not success then
+                audio.play('hit')
+              end
+            end
+            break
+          end
+        end
+      else -- shapes
+        local shapes = getShapes()
+        local startIndex = state.shapeScroll + 1
+        local endIndex = math.min(startIndex + layout.items.visibleCount - 1, #shapes)
+        
+        for displayIndex = startIndex, endIndex do
+          local actualIndex = displayIndex
+          local y = layout.items.startY + (displayIndex - startIndex) * (layout.items.height + layout.items.spacing)
+          if lx >= layout.items.x and lx <= layout.items.x + layout.items.width and
+             ly >= y and ly <= y + layout.items.height then
+            state.shapeSelection = actualIndex
+            audio.play('ui_click')
+            
+            local shape = shapes[actualIndex]
+            if shape and Cosmetics.isShapeUnlocked(shape.id) then
+              Cosmetics.selectShape(shape.id)
+              showMessage("Shape equipped!")
+            else
+              local success, message = Cosmetics.purchaseShape(shape.id)
+              showMessage(message)
+              if not success then
+                audio.play('hit')
+              end
+            end
+            break
+          end
+        end
+      end
+    elseif isDragging and touchDuration < 0.3 and math.abs(scrollVelocity) > 50 then
       -- Quick swipe - apply momentum
       if state.tab == "colors" then
         state.colorScroll = state.colorScroll + scrollVelocity * 0.3
@@ -588,7 +595,6 @@ function UICosmetics.pointerReleased(vw, vh, lx, ly)
     
     -- Apply boundaries
     local layout = getLayout(vw, vh)
-    local maxScroll = 0
     local items = state.tab == "colors" and getColors() or getShapes()
     local maxScrollOffset = math.max(0, #items - layout.items.visibleCount)
     
