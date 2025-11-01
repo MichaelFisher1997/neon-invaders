@@ -585,15 +585,21 @@ function UICosmetics.pointerReleased(vw, vh, lx, ly)
         end
       end
     elseif isDragging and touchDuration < 0.3 and math.abs(scrollVelocity) > 50 then
-      -- Quick swipe - apply momentum
+      -- Quick swipe - apply momentum with boundary checking
+      local layout = getLayout(vw, vh)
+      local items = state.tab == "colors" and getColors() or getShapes()
+      local maxScrollOffset = math.max(0, #items - layout.items.visibleCount)
+      
       if state.tab == "colors" then
-        state.colorScroll = state.colorScroll + scrollVelocity * 0.3
+        local proposedScroll = state.colorScroll + scrollVelocity * 0.3
+        state.colorScroll = math.max(0, math.min(maxScrollOffset, proposedScroll))
       else
-        state.shapeScroll = state.shapeScroll + scrollVelocity * 0.3
+        local proposedScroll = state.shapeScroll + scrollVelocity * 0.3
+        state.shapeScroll = math.max(0, math.min(maxScrollOffset, proposedScroll))
       end
     end
     
-    -- Apply boundaries
+    -- Always apply boundaries (safety check)
     local layout = getLayout(vw, vh)
     local items = state.tab == "colors" and getColors() or getShapes()
     local maxScrollOffset = math.max(0, #items - layout.items.visibleCount)
