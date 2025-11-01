@@ -1,5 +1,6 @@
 local HUD = {}
 local Input = require("src.core.input")
+local Fonts = require("src.ui.fonts")
 
 local COLORS = {
   cyan = {0.153, 0.953, 1.0},
@@ -99,8 +100,8 @@ function HUD.draw(score, lives, wave, vw, vh)
   end
   love.graphics.setLineWidth(1)
   
-  local labelFont = love.graphics.newFont(11)
-  local valueFont = love.graphics.newFont(24)
+  local labelFont = Fonts.get(11)
+  local valueFont = Fonts.get(24)
   local padding = 12
   
   -- ===== SECTION 1: SCORE (with RGB glow effect) =====
@@ -162,7 +163,7 @@ function HUD.draw(score, lives, wave, vw, vh)
   love.graphics.print(creditsText, s2X, 24)
   local multiplier = Economy.getCreditMultiplier()
   local multiplierText = string.format("x%d", multiplier or 1)
-  local multFont = love.graphics.newFont(16)
+  local multFont = Fonts.get(16)
   love.graphics.setFont(multFont)
   love.graphics.print(multiplierText, s2X + valueFont:getWidth(creditsText) + 12, 30)
   
@@ -233,7 +234,7 @@ function HUD.drawLeftControls(vw, vh)
       -- Right arrow
       love.graphics.polygon('fill', swipeCX - 20, swipeY, swipeCX + 10, swipeY - 10, swipeCX + 10, swipeY + 10)
     end
-    love.graphics.setFont(love.graphics.newFont(14))
+    Fonts.set(14)
     local swipeText = swipeDir == "left" and "SWIPE LEFT" or "SWIPE RIGHT"
     local tw = love.graphics.getFont():getWidth(swipeText)
     love.graphics.print(swipeText, (vw - tw)/2, swipeY + 20)
@@ -241,7 +242,7 @@ function HUD.drawLeftControls(vw, vh)
   
   -- Label
   setColorA(COLORS.cyan, 0.85)
-  love.graphics.setFont(love.graphics.newFont(16))
+  Fonts.set(16)
   local label = 'MOVE LEFT'
   local tw = love.graphics.getFont():getWidth(label)
   love.graphics.print(label, (vw - tw)/2, vh*0.06)
@@ -270,7 +271,7 @@ function HUD.drawRightControls(vw, vh)
       -- Right arrow
       love.graphics.polygon('fill', swipeCX - 20, swipeY, swipeCX + 10, swipeY - 10, swipeCX + 10, swipeY + 10)
     end
-    love.graphics.setFont(love.graphics.newFont(14))
+    Fonts.set(14)
     local swipeText = swipeDir == "left" and "SWIPE LEFT" or "SWIPE RIGHT"
     local tw = love.graphics.getFont():getWidth(swipeText)
     love.graphics.print(swipeText, (vw - tw)/2, swipeY + 20)
@@ -278,7 +279,7 @@ function HUD.drawRightControls(vw, vh)
   
   -- Label
   setColorA(COLORS.magenta, 0.85)
-  love.graphics.setFont(love.graphics.newFont(16))
+  Fonts.set(16)
   local label = 'MOVE RIGHT'
   local tw = love.graphics.getFont():getWidth(label)
   love.graphics.print(label, (vw - tw)/2, vh*0.06)
@@ -299,7 +300,7 @@ function HUD.drawEventsCompact(vw, vh, startX, startY)
   local barWidth = 100
   local barHeight = 6
   
-  love.graphics.setFont(love.graphics.newFont(9))
+  Fonts.set(9)
   
   -- Only show first active event in compact mode
   local event = activeEvents[1]

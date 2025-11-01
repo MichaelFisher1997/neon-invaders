@@ -1,4 +1,6 @@
 local BossGallery = {}
+local Fonts = require("src.ui.fonts")
+local InputMode = require("src.core.inputmode")
 
 local selected = 1
 local scroll = 0
@@ -153,11 +155,22 @@ function BossGallery.update(dt)
   local maxScroll = 0  -- Can't scroll above first card
   local minScroll = -math.max(0, listHeight - maxVisibleHeight)  -- Scroll to show last cards
   
-  -- Calculate target to keep selected in view (center if possible)
-  local idealScroll = -(selected - 1) * cardHeight + (vh - 200 - maxVisibleHeight) / 2
-  targetScroll = math.max(minScroll, math.min(maxScroll, idealScroll))
+  -- Only auto-scroll to selected boss when not manually scrolling
+  if not isDragging then
+    local idealScroll = -(selected - 1) * cardHeight + (vh - 200 - maxVisibleHeight) / 2
+    targetScroll = math.max(minScroll, math.min(maxScroll, idealScroll))
+  end
   
+  -- Apply smooth scrolling with momentum
   scroll = scroll + (targetScroll - scroll) * 0.15
+  
+  -- Apply friction to momentum scrolling
+  if not isDragging and scrollVelocity then
+    scrollVelocity = scrollVelocity * 0.9
+    if math.abs(scrollVelocity) < 1 then
+      scrollVelocity = 0
+    end
+  end
   
   -- Update demo boss with firing
   if demoBoss then
@@ -228,25 +241,114 @@ function BossGallery.pointerPressed(vw, vh, lx, ly)
     return 'title'
   end
   
-  -- Check boss cards
+  -- Check boss cards for selection first (only if not already dragging)
   local cardX = 20
   local cardWidth = 300
   local cardHeight = 110  -- Match drawing height
   local cardStartY = 80 + scroll  -- Start below back button
+  local cardTapped = false
+  
   for i, info in ipairs(bossInfo) do
     local cardY = cardStartY + (i - 1) * 120  -- Match drawing spacing
     local card = {x = cardX, y = cardY, w = cardWidth, h = cardHeight}
     if lx >= card.x and lx <= card.x + card.w and
        ly >= card.y and ly <= card.y + card.h then
-      selected = i
-      BossGallery.spawnDemoBoss(selected)
-      require('src.audio.audio').play('ui_click')
-      return nil
+      if not isDragging then
+        selected = i
+        BossGallery.spawnDemoBoss(selected)
+        require('src.audio.audio').play('ui_click')
+        cardTapped = true
+      end
+      break
+    end
+  end
+  
+  -- Only initialize touch tracking if we didn't tap on a card
+  if not cardTapped then
+    local listAreaX = 20
+    local listAreaWidth = 300
+    local listAreaStartY = 80
+    
+    if lx >= listAreaX and lx <= listAreaX + listAreaWidth and ly >= listAreaStartY then
+      touchStartY = ly
+      touchStartTime = love.timer.getTime()
+      isDragging = false  -- Don't start dragging immediately
+      scrollVelocity = 0
     end
   end
   
   return nil
 end
+
+-- Touch scrolling state
+local touchStartY = nil
+local touchStartTime = nil
+local scrollVelocity = 0
+local isDragging = false
+local dragThreshold = 10  -- Minimum movement to start scrolling
+
+function BossGallery.pointerMoved(vw, vh, lx, ly)
+  if touchStartY then
+    local deltaY = ly - touchStartY
+    
+    -- Check if we've moved enough to start scrolling
+    if not isDragging and math.abs(deltaY) > dragThreshold then
+      isDragging = true
+    end
+    
+    if isDragging then
+      scroll = scroll + deltaY
+      
+      -- Apply boundaries
+      local cardHeight = 120
+      local visibleCards = 5
+      local listHeight = #bossInfo * cardHeight
+      local maxScroll = 0
+      local minScroll = -math.max(0, listHeight - visibleCards * cardHeight)
+      scroll = math.max(minScroll, math.min(maxScroll, scroll))
+      
+      touchStartY = ly
+      scrollVelocity = deltaY  -- Track velocity for momentum
+    end
+  end
+  return nil
+end
+
+function BossGallery.pointerReleased(vw, vh, lx, ly)
+  if touchStartY then
+    local touchDuration = love.timer.getTime() - (touchStartTime or 0)
+    
+    if not isDragging and touchDuration < 0.3 then
+      -- This was a tap, not a drag - let the original card selection logic handle it
+      -- Don't interfere with tap selection
+    else
+      -- This was a drag - apply momentum based on scroll velocity
+      if touchDuration < 0.3 and math.abs(scrollVelocity) > 50 then
+        -- Quick swipe - apply momentum
+        targetScroll = scroll + scrollVelocity * 0.5
+      else
+        -- Slow drag - snap to position
+        targetScroll = scroll
+      end
+      
+      -- Apply boundaries to target
+      local cardHeight = 120
+      local visibleCards = 5
+      local listHeight = #bossInfo * cardHeight
+      local maxScroll = 0
+      local minScroll = -math.max(0, listHeight - visibleCards * cardHeight)
+      targetScroll = math.max(minScroll, math.min(maxScroll, targetScroll))
+    end
+  end
+  
+  touchStartY = nil
+  touchStartTime = nil
+  scrollVelocity = 0
+  isDragging = false
+  return nil
+end
+
+
 
 function BossGallery.draw(vw, vh)
   -- Background
@@ -276,7 +378,7 @@ function BossGallery.draw(vw, vh)
   
   -- Title
   love.graphics.setColor(0.153, 0.953, 1.0, 1.0)
-  love.graphics.setFont(love.graphics.newFont(36))
+  love.graphics.setFont(Fonts.get(36))
   local title = "BOSS GALLERY"
   local tw = love.graphics.getFont():getWidth(title)
   love.graphics.print(title, (vw - tw) / 2, 30)
@@ -284,7 +386,7 @@ function BossGallery.draw(vw, vh)
   -- Back button
   love.graphics.setColor(1, 1, 1, 1)
   love.graphics.rectangle('line', vw - 120, 20, 100, 40, 8, 8)
-  love.graphics.setFont(love.graphics.newFont(18))
+  love.graphics.setFont(Fonts.get(18))
   love.graphics.printf("Back", vw - 120, 35, 100, 'center')
   
   -- Boss cards - draw on left side with transparency
@@ -317,25 +419,40 @@ function BossGallery.draw(vw, vh)
       
       -- Boss name
       love.graphics.setColor(1, 1, 1, 1)
-      love.graphics.setFont(love.graphics.newFont(18))  -- Slightly larger for clarity
+      love.graphics.setFont(Fonts.get(18))  -- Slightly larger for clarity
       love.graphics.print(info.name, card.x + 45, card.y + 12)
       
       -- Waves
-      love.graphics.setFont(love.graphics.newFont(14))  -- Larger waves font
+      love.graphics.setFont(Fonts.get(14))  -- Larger waves font
       love.graphics.setColor(0.153, 0.953, 1.0, 1.0)
       love.graphics.print(info.waves, card.x + 45, card.y + 35)
       
       -- Description (shortened)
       love.graphics.setColor(1, 1, 1, 0.8)  -- Higher alpha for better readability
-      love.graphics.setFont(love.graphics.newFont(12))  -- Larger description font
+      love.graphics.setFont(Fonts.get(12))  -- Larger description font
       love.graphics.printf(info.description, card.x + 10, card.y + 60, card.w - 20, 'left')  -- More space above
     end
   end
   
   -- Navigation hint
-  love.graphics.setFont(love.graphics.newFont(14))
+  love.graphics.setFont(Fonts.get(14))
   love.graphics.setColor(1, 1, 1, 0.8)
-  love.graphics.printf("↑↓ Browse bosses • ESC Return • Watch attack patterns", 0, vh - 25, vw, 'center')
+  local font = Fonts.get(14)
+  local y = vh - 25
+  local useText = ""
+  local restText = " Browse bosses • ESC Return • Watch attack patterns"
+  local useWidth = font:getWidth(useText)
+  local restWidth = font:getWidth(restText)
+  local arrowWidth = 20
+  local totalWidth = useWidth + arrowWidth + restWidth
+  local startX = (vw - totalWidth) / 2
+  love.graphics.print(useText, startX, y)
+  local arrowX = startX + useWidth
+  -- Up arrow
+  love.graphics.polygon("line", arrowX + 5, y + 8, arrowX + 10, y + 3, arrowX + 15, y + 8)
+  -- Down arrow
+  love.graphics.polygon("line", arrowX + 5, y + 13, arrowX + 10, y + 18, arrowX + 15, y + 13)
+  love.graphics.print(restText, arrowX + arrowWidth, y)
 end
 
 return BossGallery

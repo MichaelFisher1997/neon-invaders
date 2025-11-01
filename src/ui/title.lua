@@ -1,4 +1,5 @@
 local Title = {}
+local Fonts = require("src.ui.fonts")
 
 local blink = 0
 local selected = 1
@@ -53,7 +54,7 @@ end
 function Title.draw(vw, vh)
   -- Title
   love.graphics.setColor(0.153, 0.953, 1.0, 1.0)
-  love.graphics.setFont(love.graphics.newFont(48))
+  love.graphics.setFont(Fonts.get(48))
   local title = "NEON INVADERS"
   local tw = love.graphics.getFont():getWidth(title)
   love.graphics.print(title, (vw - tw) / 2, vh * 0.16)
@@ -69,12 +70,12 @@ function Title.draw(vw, vh)
       love.graphics.rectangle('fill', r.x, r.y, r.w, r.h, 10, 10)
     end
     love.graphics.setColor(1,1,1,1)
-    love.graphics.setFont(love.graphics.newFont(22))
+    love.graphics.setFont(Fonts.get(22))
     love.graphics.printf(items[i], r.x, r.y + r.h/2 - 12, r.w, 'center')
   end
 
   -- Help
-  love.graphics.setFont(love.graphics.newFont(16))
+  love.graphics.setFont(Fonts.get(16))
   local os = (love.system and love.system.getOS) and love.system.getOS() or ""
   local prompt = (os == 'Android' or os == 'iOS') and "Tap to select" or "Up/Down to choose, Enter to confirm"
   love.graphics.setColor(1,1,1,0.9)
