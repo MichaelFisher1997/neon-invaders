@@ -7,10 +7,12 @@ on:
 
 jobs:
   android-build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     env:
       GRADLE_OPTS: "-Xmx6g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8"
       NIXPKGS_ACCEPT_ANDROID_SDK_LICENSE: 1
+      ANDROID_SDK_ROOT: ""
+      ANDROID_NDK_ROOT: ""
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -36,7 +38,9 @@ jobs:
           export NIXPKGS_ACCEPT_ANDROID_SDK_LICENSE=1
 
       - name: Build Android APK using flake
-        run: nix run .#buildAndroid
+        run: |
+          echo "Using nix run .#buildAndroid (working locally)..."
+          nix run .#buildAndroid
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
