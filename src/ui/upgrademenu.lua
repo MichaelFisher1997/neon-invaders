@@ -17,6 +17,10 @@ local state = {
   backButtonHovered = false
 }
 
+-- Protection against accidental touches on menu entry
+local justEntered = false
+local entryProtectionTime = 0.5 -- 0.5s protection after menu entry
+
 -- Initialize upgrade menu
 function UpgradeMenu.init()
   state.selectedUpgrade = 1
@@ -27,6 +31,10 @@ function UpgradeMenu.init()
   
   -- Set touch delay to prevent accidental purchases
   InputMode.setTouchDelay()
+  
+  -- Set entry protection flag
+  justEntered = true
+  local startTime = love.timer.getTime()
   
   -- Get upgrade list in new order (cheapest to most expensive)
   local order = {"speed", "damage", "fireRate", "piercing", "multiShot"}
@@ -70,6 +78,14 @@ end
 
 -- Handle input
 function UpgradeMenu.update(dt)
+  -- Update entry protection
+  if justEntered then
+    entryProtectionTime = entryProtectionTime - dt
+    if entryProtectionTime <= 0 then
+      justEntered = false
+    end
+  end
+  
   -- Update message timer
   if state.messageTimer > 0 then
     state.messageTimer = state.messageTimer - dt
@@ -122,8 +138,8 @@ function UpgradeMenu.update(dt)
 end
 
 function UpgradeMenu.pointerPressed(vw, vh, lx, ly)
-  -- Check touch delay to prevent accidental purchases
-  if InputMode.isTouchDelayed() then
+  -- Check touch delay AND entry protection to prevent accidental purchases
+  if InputMode.isTouchDelayed() or justEntered then
     return nil
   end
   
