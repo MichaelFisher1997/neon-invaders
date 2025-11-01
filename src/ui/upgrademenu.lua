@@ -4,6 +4,7 @@ local Economy = require("src.systems.economy")
 local Input = require("src.core.input")
 local State = require("src.core.state")
 local Fonts = require("src.ui.fonts")
+local InputMode = require("src.core.inputmode")
 
 local VIRTUAL_WIDTH, VIRTUAL_HEIGHT = Constants.VIRTUAL_WIDTH, Constants.VIRTUAL_HEIGHT
 
@@ -23,6 +24,9 @@ function UpgradeMenu.init()
   state.message = ""
   state.messageTimer = 0
   state.backButtonHovered = false
+  
+  -- Set touch delay to prevent accidental purchases
+  InputMode.setTouchDelay()
   
   -- Get upgrade list in new order (cheapest to most expensive)
   local order = {"speed", "damage", "fireRate", "piercing", "multiShot"}
@@ -118,6 +122,11 @@ function UpgradeMenu.update(dt)
 end
 
 function UpgradeMenu.pointerPressed(vw, vh, lx, ly)
+  -- Check touch delay to prevent accidental purchases
+  if InputMode.isTouchDelayed() then
+    return nil
+  end
+  
   -- Handle back button
   local backButtonX = 20
   local backButtonY = 20
@@ -142,7 +151,6 @@ function UpgradeMenu.pointerPressed(vw, vh, lx, ly)
     if lx >= (VIRTUAL_WIDTH - 600)/2 and lx <= (VIRTUAL_WIDTH - 600)/2 + 600 and
        ly >= upgradeY and ly <= upgradeY + upgradeHeight then
       state.selectedUpgrade = i
-
       local success, message = Economy.purchaseUpgrade(upgradeType)
       showMessage(message)
       break

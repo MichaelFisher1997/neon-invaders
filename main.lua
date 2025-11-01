@@ -207,6 +207,7 @@ function love.touchpressed(id, x, y, dx, dy, pressure)
   local curState = services.state.get()
   
   -- Allow scrolling in boss gallery and cosmetics even during touch delay
+  -- But keep protection for upgrades menu to prevent accidental purchases
   if curState == "bossGallery" or curState == "cosmetics" then
     -- Always allow touch input for scrolling menus (scrolling should work immediately)
     local result = services.input.handleUIPointer(curState, vw, vh, vx, vy, uiHandlers)
