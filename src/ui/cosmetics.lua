@@ -481,7 +481,7 @@ function UICosmetics.pointerPressed(vw, vh, lx, ly)
         audio.play('ui_click')
         
         local color = colors[actualIndex]
-        if Cosmetics.isColorUnlocked(color.id) then
+        if color and Cosmetics.isColorUnlocked(color.id) then
           Cosmetics.selectColor(color.id)
           showMessage("Color equipped!")
         else
@@ -508,7 +508,7 @@ function UICosmetics.pointerPressed(vw, vh, lx, ly)
         audio.play('ui_click')
         
         local shape = shapes[actualIndex]
-        if Cosmetics.isShapeUnlocked(shape.id) then
+        if shape and Cosmetics.isShapeUnlocked(shape.id) then
           Cosmetics.selectShape(shape.id)
           showMessage("Shape equipped!")
         else
