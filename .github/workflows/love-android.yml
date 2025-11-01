@@ -1,4 +1,4 @@
-name: Build Android APK (love-actions)
+name: Build Android APK (Nix)
 
 permissions:
   contents: write # needed to create GitHub Releases on tag builds
@@ -9,7 +9,7 @@ on:
   pull_request:
 
 jobs:
-  love-android:
+  android-build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -17,39 +17,27 @@ jobs:
         with:
           submodules: recursive
 
-      - name: Build .love package
-        shell: bash
-        run: |
-          zip -9 -r game.love . \
-            -x "android/**" \
-            -x ".git/**" \
-            -x ".github/**" \
-            -x "**/node_modules/**" \
-            -x "**/build/**" \
-            -x "**/dist/**"
-
-      - name: Build love android
-        id: build-love
-        uses: love-actions/love-actions-android@v2
+      - name: Install Nix
+        uses: cachix/install-nix-action@v22
         with:
-          app-name: "Neon Invaders"
-          bundle-id: "org.love2d.android"
-          resource-path: "android/icons"
-          # icon-specifier: "@mipmap/ic_launcher"
-          love-ref: "11.5"
-          love-package: "game.love"
-          product-name: "neon-invaders"
-          version-string: "12.0"
-          version-code: 33
-          output-folder: "build"
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - name: Setup Cachix
+        uses: cachix/cachix-action@v12
+        with:
+          name: nixpkgs-wayland
+          authToken: '${{ secrets.CACHIX_AUTH_TOKEN }}'
+
+      - name: Build Android APK
+        run: |
+          nix develop --command build-android
 
       - name: Upload APK(s)
         uses: actions/upload-artifact@v4
         with:
           name: neon-invaders-android
           path: |
-            build/*.apk
-            build/**/*.apk
+            android/love-android/app/build/outputs/apk/debug/*.apk
           if-no-files-found: error
 
       # On tag builds, also publish a Release with direct .apk assets
@@ -58,6 +46,5 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            build/*.apk
-            build/**/*.apk
+            android/love-android/app/build/outputs/apk/debug/*.apk
           generate_release_notes: true
