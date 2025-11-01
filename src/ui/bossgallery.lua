@@ -241,40 +241,16 @@ function BossGallery.pointerPressed(vw, vh, lx, ly)
     return 'title'
   end
   
-  -- Check boss cards for selection first (only if not already dragging)
-  local cardX = 20
-  local cardWidth = 300
-  local cardHeight = 110  -- Match drawing height
-  local cardStartY = 80 + scroll  -- Start below back button
-  local cardTapped = false
+  -- Initialize touch tracking first for the list area
+  local listAreaX = 20
+  local listAreaWidth = 300
+  local listAreaStartY = 80
   
-  for i, info in ipairs(bossInfo) do
-    local cardY = cardStartY + (i - 1) * 120  -- Match drawing spacing
-    local card = {x = cardX, y = cardY, w = cardWidth, h = cardHeight}
-    if lx >= card.x and lx <= card.x + card.w and
-       ly >= card.y and ly <= card.y + card.h then
-      if not isDragging then
-        selected = i
-        BossGallery.spawnDemoBoss(selected)
-        require('src.audio.audio').play('ui_click')
-        cardTapped = true
-      end
-      break
-    end
-  end
-  
-  -- Only initialize touch tracking if we didn't tap on a card
-  if not cardTapped then
-    local listAreaX = 20
-    local listAreaWidth = 300
-    local listAreaStartY = 80
-    
-    if lx >= listAreaX and lx <= listAreaX + listAreaWidth and ly >= listAreaStartY then
-      touchStartY = ly
-      touchStartTime = love.timer.getTime()
-      isDragging = false  -- Don't start dragging immediately
-      scrollVelocity = 0
-    end
+  if lx >= listAreaX and lx <= listAreaX + listAreaWidth and ly >= listAreaStartY then
+    touchStartY = ly
+    touchStartTime = love.timer.getTime()
+    isDragging = false  -- Don't start dragging immediately
+    scrollVelocity = 0
   end
   
   return nil
@@ -285,7 +261,7 @@ local touchStartY = nil
 local touchStartTime = nil
 local scrollVelocity = 0
 local isDragging = false
-local dragThreshold = 10  -- Minimum movement to start scrolling
+local dragThreshold = 8  -- Minimum movement to start scrolling
 
 function BossGallery.pointerMoved(vw, vh, lx, ly)
   if touchStartY then
@@ -309,6 +285,7 @@ function BossGallery.pointerMoved(vw, vh, lx, ly)
       
       touchStartY = ly
       scrollVelocity = deltaY  -- Track velocity for momentum
+      targetScroll = scroll  -- Update target scroll immediately for responsive feel
     end
   end
   return nil
@@ -318,9 +295,24 @@ function BossGallery.pointerReleased(vw, vh, lx, ly)
   if touchStartY then
     local touchDuration = love.timer.getTime() - (touchStartTime or 0)
     
-    if not isDragging and touchDuration < 0.3 then
-      -- This was a tap, not a drag - let the original card selection logic handle it
-      -- Don't interfere with tap selection
+    if not isDragging and touchDuration < 0.3 and touchDuration > 0.05 then
+      -- This was a tap - check what was tapped
+      local cardX = 20
+      local cardWidth = 300
+      local cardHeight = 110  -- Match drawing height
+      local cardStartY = 80 + scroll  -- Start below back button
+      
+      for i, info in ipairs(bossInfo) do
+        local cardY = cardStartY + (i - 1) * 120  -- Match drawing spacing
+        local card = {x = cardX, y = cardY, w = cardWidth, h = cardHeight}
+        if lx >= card.x and lx <= card.x + card.w and
+           ly >= card.y and ly <= card.y + card.h then
+          selected = i
+          BossGallery.spawnDemoBoss(selected)
+          require('src.audio.audio').play('ui_click')
+          break
+        end
+      end
     else
       -- This was a drag - apply momentum based on scroll velocity
       if touchDuration < 0.3 and math.abs(scrollVelocity) > 50 then

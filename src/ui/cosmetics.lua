@@ -25,6 +25,13 @@ local scrollVelocity = 0
 local isDragging = false
 local currentScroll = 0  -- Track which scroll we're modifying
 
+-- Double tap detection
+local lastTapTime = 0
+local lastTapX = 0
+local lastTapY = 0
+local doubleTapThreshold = 0.3  -- 300ms for double tap
+local doubleTapDistance = 50   -- Max distance for double tap
+
 -- Dynamic RGB preview (faster!)
 local function rgbTripColor(time)
   local t = time * 2.5
@@ -41,23 +48,36 @@ end
 
 local function getColors()
   local colors = {}
-  for id, color in pairs(Constants.ECONOMY.cosmetics.colors) do
-    color.id = id
-    table.insert(colors, color)
+  if Constants.ECONOMY and Constants.ECONOMY.cosmetics and Constants.ECONOMY.cosmetics.colors then
+    for id, color in pairs(Constants.ECONOMY.cosmetics.colors) do
+      if color and id and type(color) == "table" then  -- Only add valid entries
+        color.id = id
+        table.insert(colors, color)
+      end
+    end
   end
   return colors
 end
 
 local function getShapes()
   local shapes = {}
-  for id, shape in pairs(Constants.ECONOMY.cosmetics.shapes) do
-    shape.id = id
-    table.insert(shapes, shape)
+  if Constants.ECONOMY and Constants.ECONOMY.cosmetics and Constants.ECONOMY.cosmetics.shapes then
+    for id, shape in pairs(Constants.ECONOMY.cosmetics.shapes) do
+      if shape and id and type(shape) == "table" then  -- Only add valid entries
+        shape.id = id
+        table.insert(shapes, shape)
+      end
+    end
   end
   return shapes
 end
 
 local function getLayout(vw, vh)
+  -- Safety check for valid dimensions
+  if not vw or not vh or vw <= 0 or vh <= 0 then
+    vw, vh = love.graphics.getDimensions()
+  end
+  
   local tabButtonsY = 110
   local tabButtonW = 120
   local tabButtonH = 40
@@ -334,25 +354,31 @@ function UICosmetics.draw(vw, vh)
   -- Instructions
   love.graphics.setFont(Fonts.get(14))
   love.graphics.setColor(0.7, 0.7, 0.7, 1)
-  love.graphics.setFont(Fonts.get(14))
-  love.graphics.setColor(0.7, 0.7, 0.7, 1)
   local y = vh - 30
   local font = Fonts.get(14)
-  local useText = "Use UP/DOWN "
-  local restText = " arrows to select, ENTER to purchase/equip, TAB to switch tabs, ESC to go back"
-  local useWidth = font:getWidth(useText)
-  local restWidth = font:getWidth(restText)
-  local arrowWidth = 20
-  local totalWidth = useWidth + arrowWidth + restWidth
-  local startX = (vw - totalWidth) / 2
-  love.graphics.print(useText, startX, y)
-  local arrowX = startX + useWidth
-  -- Up arrow (solid)
-  love.graphics.polygon("fill", arrowX + 3, y + 12, arrowX + 8, y + 12, arrowX + 5.5, y + 6)
-  -- Down arrow (solid)
-  love.graphics.polygon("fill", arrowX + 3, y + 8, arrowX + 8, y + 8, arrowX + 5.5, y + 14)
-  if restText then
-    love.graphics.print(restText, arrowX + arrowWidth, y)
+  
+  -- Show different instructions for touch vs keyboard
+  if InputMode.isTouch() then
+    local touchText = "Touch: Single tap to select, Double-tap to purchase/equip, Swipe to scroll"
+    local textWidth = font:getWidth(touchText)
+    love.graphics.printf(touchText, 0, y, vw, "center")
+  else
+    local useText = "Use UP/DOWN "
+    local restText = " arrows to select, ENTER to purchase/equip, TAB to switch tabs, ESC to go back"
+    local useWidth = font:getWidth(useText)
+    local restWidth = font:getWidth(restText)
+    local arrowWidth = 20
+    local totalWidth = useWidth + arrowWidth + restWidth
+    local startX = (vw - totalWidth) / 2
+    love.graphics.print(useText, startX, y)
+    local arrowX = startX + useWidth
+    -- Up arrow (solid)
+    love.graphics.polygon("fill", arrowX + 3, y + 12, arrowX + 8, y + 12, arrowX + 5.5, y + 6)
+    -- Down arrow (solid)
+    love.graphics.polygon("fill", arrowX + 3, y + 8, arrowX + 8, y + 8, arrowX + 5.5, y + 14)
+    if restText then
+      love.graphics.print(restText, arrowX + arrowWidth, y)
+    end
   end
 
   
@@ -483,6 +509,11 @@ function UICosmetics.pointerPressed(vw, vh, lx, ly)
 end
 
 function UICosmetics.pointerMoved(vw, vh, lx, ly)
+  -- Safety check for valid coordinates
+  if not vw or not vh or not lx or not ly then
+    return nil
+  end
+  
   if touchStartY then
     local deltaY = ly - touchStartY
     local dragThreshold = 10  -- Minimum movement to start scrolling
@@ -504,13 +535,15 @@ function UICosmetics.pointerMoved(vw, vh, lx, ly)
       
       -- Apply boundaries
       local layout = getLayout(vw, vh)
-      local items = state.tab == "colors" and getColors() or getShapes()
-      local maxScrollOffset = math.max(0, #items - layout.items.visibleCount)
+      local colors = getColors()
+      local shapes = getShapes()
+      local maxColorScroll = math.max(0, #colors - layout.items.visibleCount)
+      local maxShapeScroll = math.max(0, #shapes - layout.items.visibleCount)
       
       if state.tab == "colors" then
-        state.colorScroll = math.max(0, math.min(maxScrollOffset, state.colorScroll))
+        state.colorScroll = math.max(0, math.min(maxColorScroll, state.colorScroll))
       else
-        state.shapeScroll = math.max(0, math.min(maxScrollOffset, state.shapeScroll))
+        state.shapeScroll = math.max(0, math.min(maxShapeScroll, state.shapeScroll))
       end
       
       touchStartY = ly
@@ -523,89 +556,181 @@ end
 function UICosmetics.pointerReleased(vw, vh, lx, ly)
   if touchStartY then
     local touchDuration = love.timer.getTime() - (touchStartTime or 0)
+    local currentTime = love.timer.getTime()
+    
+    -- Safety check - ensure we have valid coordinates
+    if not lx or not ly or not vw or not vh then
+      touchStartY = nil
+      touchStartTime = nil
+      scrollVelocity = 0
+      isDragging = false
+      return nil
+    end
     
     -- Check if this was a tap (not a drag)
     if not isDragging and touchDuration < 0.3 and touchDuration > 0.05 then
-      -- This was a tap - check what was tapped
-      local layout = getLayout(vw, vh)
+      -- Check for double tap
+      local timeSinceLastTap = currentTime - lastTapTime
+      local distanceFromLastTap = math.sqrt((lx - lastTapX)^2 + (ly - lastTapY)^2)
       
-      if state.tab == "colors" then
-        local colors = getColors()
-        local startIndex = state.colorScroll + 1
-        local endIndex = math.min(startIndex + layout.items.visibleCount - 1, #colors)
+      local isDoubleTap = (timeSinceLastTap < doubleTapThreshold and distanceFromLastTap < doubleTapDistance)
+      
+      -- Update last tap info
+      lastTapTime = currentTime
+      lastTapX = lx
+      lastTapY = ly
+      
+      if isDoubleTap then
+        -- This was a double tap - handle purchase/equip
+        local layout = getLayout(vw, vh)
         
-        for displayIndex = startIndex, endIndex do
-          local actualIndex = displayIndex
-          local y = layout.items.startY + (displayIndex - startIndex) * (layout.items.height + layout.items.spacing)
-          if lx >= layout.items.x and lx <= layout.items.x + layout.items.width and
-             ly >= y and ly <= y + layout.items.height then
-            state.colorSelection = actualIndex
-            audio.play('ui_click')
-            
-            local color = colors[actualIndex]
-            if color and Cosmetics.isColorUnlocked(color.id) then
-              Cosmetics.selectColor(color.id)
-              showMessage("Color equipped!")
-            else
-              local success, message = Cosmetics.purchaseColor(color.id)
-              showMessage(message)
-              if not success then
-                audio.play('hit')
+        if state.tab == "colors" then
+          local colors = getColors()
+          local startIndex = math.max(1, state.colorScroll + 1)
+          local endIndex = math.min(#colors, startIndex + layout.items.visibleCount - 1)
+          
+          for displayIndex = startIndex, endIndex do
+            local actualIndex = displayIndex
+            if actualIndex >= 1 and actualIndex <= #colors then
+              local y = layout.items.startY + (displayIndex - startIndex) * (layout.items.height + layout.items.spacing)
+              if lx >= layout.items.x and lx <= layout.items.x + layout.items.width and
+                 ly >= y and ly <= y + layout.items.height then
+                state.colorSelection = actualIndex
+                audio.play('ui_click')
+                
+                local color = colors[actualIndex]
+                if color and color.id then
+                  if Cosmetics.isColorUnlocked(color.id) then
+                    Cosmetics.selectColor(color.id)
+                    showMessage("Color equipped!")
+                  else
+                    local success, message = Cosmetics.purchaseColor(color.id)
+                    showMessage(message or "Purchase failed")
+                    if not success then
+                      audio.play('hit')
+                    end
+                  end
+                end
+                break
               end
             end
-            break
+          end
+        else -- shapes
+          local shapes = getShapes()
+          local startIndex = math.max(1, state.shapeScroll + 1)
+          local endIndex = math.min(#shapes, startIndex + layout.items.visibleCount - 1)
+          
+          for displayIndex = startIndex, endIndex do
+            local actualIndex = displayIndex
+            if actualIndex >= 1 and actualIndex <= #shapes then
+              local y = layout.items.startY + (displayIndex - startIndex) * (layout.items.height + layout.items.spacing)
+              if lx >= layout.items.x and lx <= layout.items.x + layout.items.width and
+                 ly >= y and ly <= y + layout.items.height then
+                state.shapeSelection = actualIndex
+                audio.play('ui_click')
+                
+                local shape = shapes[actualIndex]
+                if shape and shape.id then
+                  if Cosmetics.isShapeUnlocked(shape.id) then
+                    Cosmetics.selectShape(shape.id)
+                    showMessage("Shape equipped!")
+                  else
+                    local success, message = Cosmetics.purchaseShape(shape.id)
+                    showMessage(message or "Purchase failed")
+                    if not success then
+                      audio.play('hit')
+                    end
+                  end
+                end
+                break
+              end
+            end
           end
         end
-      else -- shapes
-        local shapes = getShapes()
-        local startIndex = state.shapeScroll + 1
-        local endIndex = math.min(startIndex + layout.items.visibleCount - 1, #shapes)
+      else
+        -- Single tap - just select the item, don't purchase
+        local layout = getLayout(vw, vh)
         
-        for displayIndex = startIndex, endIndex do
-          local actualIndex = displayIndex
-          local y = layout.items.startY + (displayIndex - startIndex) * (layout.items.height + layout.items.spacing)
-          if lx >= layout.items.x and lx <= layout.items.x + layout.items.width and
-             ly >= y and ly <= y + layout.items.height then
-            state.shapeSelection = actualIndex
-            audio.play('ui_click')
-            
-            local shape = shapes[actualIndex]
-            if shape and Cosmetics.isShapeUnlocked(shape.id) then
-              Cosmetics.selectShape(shape.id)
-              showMessage("Shape equipped!")
-            else
-              local success, message = Cosmetics.purchaseShape(shape.id)
-              showMessage(message)
-              if not success then
-                audio.play('hit')
+        if state.tab == "colors" then
+          local colors = getColors()
+          if not colors or #colors == 0 then
+            touchStartY = nil
+            touchStartTime = nil
+            scrollVelocity = 0
+            isDragging = false
+            return nil
+          end
+          
+          local startIndex = math.max(1, state.colorScroll + 1)
+          local endIndex = math.min(#colors, startIndex + layout.items.visibleCount - 1)
+          
+          for displayIndex = startIndex, endIndex do
+            local actualIndex = displayIndex
+            if actualIndex >= 1 and actualIndex <= #colors then
+              local y = layout.items.startY + (displayIndex - startIndex) * (layout.items.height + layout.items.spacing)
+              if lx >= layout.items.x and lx <= layout.items.x + layout.items.width and
+                 ly >= y and ly <= y + layout.items.height then
+                state.colorSelection = actualIndex
+                audio.play('ui_click')
+                showMessage("Double-tap to purchase/equip")
+                break
               end
             end
-            break
+          end
+        else -- shapes
+          local shapes = getShapes()
+          if not shapes or #shapes == 0 then
+            touchStartY = nil
+            touchStartTime = nil
+            scrollVelocity = 0
+            isDragging = false
+            return nil
+          end
+          
+          local startIndex = math.max(1, state.shapeScroll + 1)
+          local endIndex = math.min(#shapes, startIndex + layout.items.visibleCount - 1)
+          
+          for displayIndex = startIndex, endIndex do
+            local actualIndex = displayIndex
+            if actualIndex >= 1 and actualIndex <= #shapes then
+              local y = layout.items.startY + (displayIndex - startIndex) * (layout.items.height + layout.items.spacing)
+              if lx >= layout.items.x and lx <= layout.items.x + layout.items.width and
+                 ly >= y and ly <= y + layout.items.height then
+                state.shapeSelection = actualIndex
+                audio.play('ui_click')
+                showMessage("Double-tap to purchase/equip")
+                break
+              end
+            end
           end
         end
       end
     elseif isDragging and touchDuration < 0.3 and math.abs(scrollVelocity) > 50 then
       -- Quick swipe - apply momentum with boundary checking
       local layout = getLayout(vw, vh)
-      local items = state.tab == "colors" and getColors() or getShapes()
-      local maxScrollOffset = math.max(0, #items - layout.items.visibleCount)
+      local colors = getColors()
+      local shapes = getShapes()
+      local maxColorScroll = math.max(0, #colors - layout.items.visibleCount)
+      local maxShapeScroll = math.max(0, #shapes - layout.items.visibleCount)
       
       if state.tab == "colors" then
         local proposedScroll = state.colorScroll + scrollVelocity * 0.3
-        state.colorScroll = math.max(0, math.min(maxScrollOffset, proposedScroll))
+        state.colorScroll = math.max(0, math.min(maxColorScroll, proposedScroll))
       else
         local proposedScroll = state.shapeScroll + scrollVelocity * 0.3
-        state.shapeScroll = math.max(0, math.min(maxScrollOffset, proposedScroll))
+        state.shapeScroll = math.max(0, math.min(maxShapeScroll, proposedScroll))
       end
     end
     
     -- Always apply boundaries (safety check)
     local layout = getLayout(vw, vh)
-    local items = state.tab == "colors" and getColors() or getShapes()
-    local maxScrollOffset = math.max(0, #items - layout.items.visibleCount)
+    local colors = getColors()
+    local shapes = getShapes()
+    local maxColorScroll = math.max(0, #colors - layout.items.visibleCount)
+    local maxShapeScroll = math.max(0, #shapes - layout.items.visibleCount)
     
-    state.colorScroll = math.max(0, math.min(maxScrollOffset, state.colorScroll))
-    state.shapeScroll = math.max(0, math.min(maxScrollOffset, state.shapeScroll))
+    state.colorScroll = math.max(0, math.min(maxColorScroll, state.colorScroll))
+    state.shapeScroll = math.max(0, math.min(maxShapeScroll, state.shapeScroll))
   end
   
   touchStartY = nil

@@ -23,6 +23,11 @@ if ! grep -q "signing-config.gradle" "$ENGINE_DIR/app/build.gradle"; then
   printf "\napply from: '../../signing-config.gradle'\n" >> "$ENGINE_DIR/app/build.gradle"
 fi
 
+# Fix CMake minimum version compatibility issue
+if grep -q "CMAKE_DISABLE_PRECOMPILE_HEADERS=ON\"" "$ENGINE_DIR/app/build.gradle"; then
+  sed -i 's/\(CMAKE_DISABLE_PRECOMPILE_HEADERS=ON\)\"/\1", "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"/' "$ENGINE_DIR/app/build.gradle"
+fi
+
 # Ensure Android SDK is configured for local builds by writing local.properties
 SDK_DIR="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
 if [ -z "$SDK_DIR" ]; then
