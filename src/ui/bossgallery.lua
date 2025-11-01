@@ -241,7 +241,19 @@ function BossGallery.pointerPressed(vw, vh, lx, ly)
     return 'title'
   end
   
-  -- Check boss cards first (for selection)
+  -- Always initialize touch tracking for scrolling in the list area
+  local listAreaX = 20
+  local listAreaWidth = 300
+  local listAreaStartY = 80
+  
+  if lx >= listAreaX and lx <= listAreaX + listAreaWidth and ly >= listAreaStartY then
+    touchStartY = ly
+    touchStartTime = love.timer.getTime()
+    isDragging = false  -- Don't start dragging immediately
+    scrollVelocity = 0
+  end
+  
+  -- Check boss cards for selection (but only if not dragging)
   local cardX = 20
   local cardWidth = 300
   local cardHeight = 110  -- Match drawing height
@@ -251,40 +263,14 @@ function BossGallery.pointerPressed(vw, vh, lx, ly)
     local card = {x = cardX, y = cardY, w = cardWidth, h = cardHeight}
     if lx >= card.x and lx <= card.x + card.w and
        ly >= card.y and ly <= card.y + card.h then
-      selected = i
-      BossGallery.spawnDemoBoss(selected)
-      require('src.audio.audio').play('ui_click')
+      -- Only select if we haven't started dragging yet
+      if not isDragging then
+        selected = i
+        BossGallery.spawnDemoBoss(selected)
+        require('src.audio.audio').play('ui_click')
+      end
       return nil
     end
-  end
-  
-  -- Initialize touch tracking for boss list area (but not on cards)
-  local listAreaX = 20
-  local listAreaWidth = 300
-  local listAreaStartY = 80
-  local cardTapped = false
-  
-  -- Check if we tapped on a card first
-  local cardX = 20
-  local cardWidth = 300
-  local cardHeight = 110
-  local cardStartY = 80 + scroll
-  for i, info in ipairs(bossInfo) do
-    local cardY = cardStartY + (i - 1) * 120
-    local card = {x = cardX, y = cardY, w = cardWidth, h = cardHeight}
-    if lx >= card.x and lx <= card.x + card.w and
-       ly >= card.y and ly <= card.y + card.h then
-      cardTapped = true
-      break
-    end
-  end
-  
-  -- Only start touch tracking if we didn't tap on a card
-  if not cardTapped and lx >= listAreaX and lx <= listAreaX + listAreaWidth and ly >= listAreaStartY then
-    touchStartY = ly
-    touchStartTime = love.timer.getTime()
-    isDragging = false  -- Don't start dragging immediately
-    scrollVelocity = 0
   end
   
   return nil

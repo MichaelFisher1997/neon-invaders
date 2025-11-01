@@ -47,6 +47,15 @@ function InputMode.isTouchDelayed()
   return touchDelayTimer > 0
 end
 
+function InputMode.isTouchDelayedForButtons()
+  return touchDelayTimer > 0
+end
+
+function InputMode.isTouchDelayedForScrolling()
+  -- Allow scrolling immediately, but block buttons for 0.5s
+  return false
+end
+
 function InputMode.getMode()
   return mode
 end

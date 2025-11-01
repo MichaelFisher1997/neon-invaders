@@ -202,18 +202,25 @@ end
 function love.touchpressed(id, x, y, dx, dy, pressure)
   services.inputMode.onTouchPressed()
   
-  -- Check if touch is delayed (prevent accidental touches after screen transitions)
-  if services.inputMode.isTouchDelayed() then
-    return
-  end
-  
   local vx, vy = services.scaling.toVirtual(x, y)
   local vw, vh = services.scaling.getVirtualSize()
   local curState = services.state.get()
   
-  -- Handle UI input
-  local result = services.input.handleUIPointer(curState, vw, vh, vx, vy, uiHandlers)
-  handleUIAction(result, curState)
+  -- Allow scrolling in boss gallery and cosmetics even during touch delay
+  if curState == "bossGallery" or curState == "cosmetics" then
+    -- Always allow touch input for scrolling menus (scrolling should work immediately)
+    local result = services.input.handleUIPointer(curState, vw, vh, vx, vy, uiHandlers)
+    handleUIAction(result, curState)
+  else
+    -- Check if touch is delayed for other menus (prevent accidental touches after screen transitions)
+    if services.inputMode.isTouchDelayed() then
+      return
+    end
+    
+    -- Handle UI input
+    local result = services.input.handleUIPointer(curState, vw, vh, vx, vy, uiHandlers)
+    handleUIAction(result, curState)
+  end
 end
 
 function love.touchmoved(id, x, y, dx, dy, pressure)
