@@ -241,35 +241,39 @@ function BossGallery.pointerPressed(vw, vh, lx, ly)
     return 'title'
   end
   
-  -- Always initialize touch tracking for scrolling in the list area
-  local listAreaX = 20
-  local listAreaWidth = 300
-  local listAreaStartY = 80
-  
-  if lx >= listAreaX and lx <= listAreaX + listAreaWidth and ly >= listAreaStartY then
-    touchStartY = ly
-    touchStartTime = love.timer.getTime()
-    isDragging = false  -- Don't start dragging immediately
-    scrollVelocity = 0
-  end
-  
-  -- Check boss cards for selection (but only if not dragging)
+  -- Check boss cards for selection first (only if not already dragging)
   local cardX = 20
   local cardWidth = 300
   local cardHeight = 110  -- Match drawing height
   local cardStartY = 80 + scroll  -- Start below back button
+  local cardTapped = false
+  
   for i, info in ipairs(bossInfo) do
     local cardY = cardStartY + (i - 1) * 120  -- Match drawing spacing
     local card = {x = cardX, y = cardY, w = cardWidth, h = cardHeight}
     if lx >= card.x and lx <= card.x + card.w and
        ly >= card.y and ly <= card.y + card.h then
-      -- Only select if we haven't started dragging yet
       if not isDragging then
         selected = i
         BossGallery.spawnDemoBoss(selected)
         require('src.audio.audio').play('ui_click')
+        cardTapped = true
       end
-      return nil
+      break
+    end
+  end
+  
+  -- Only initialize touch tracking if we didn't tap on a card
+  if not cardTapped then
+    local listAreaX = 20
+    local listAreaWidth = 300
+    local listAreaStartY = 80
+    
+    if lx >= listAreaX and lx <= listAreaX + listAreaWidth and ly >= listAreaStartY then
+      touchStartY = ly
+      touchStartTime = love.timer.getTime()
+      isDragging = false  -- Don't start dragging immediately
+      scrollVelocity = 0
     end
   end
   

@@ -528,7 +528,7 @@ function UICosmetics.pointerPressed(vw, vh, lx, ly)
      ly >= layout.items.startY then
     touchStartY = ly
     touchStartTime = love.timer.getTime()
-    isDragging = true
+    isDragging = false  -- Don't start dragging immediately, wait for threshold
     scrollVelocity = 0
     currentScroll = state.tab == "colors" and state.colorScroll or state.shapeScroll
   end
@@ -537,32 +537,39 @@ function UICosmetics.pointerPressed(vw, vh, lx, ly)
 end
 
 function UICosmetics.pointerMoved(vw, vh, lx, ly)
-  if touchStartY and isDragging then
+  if touchStartY then
     local deltaY = ly - touchStartY
+    local dragThreshold = 10  -- Minimum movement to start scrolling
     
-    -- Update appropriate scroll based on current tab
-    if state.tab == "colors" then
-      state.colorScroll = state.colorScroll + deltaY
-      currentScroll = state.colorScroll
-    else
-      state.shapeScroll = state.shapeScroll + deltaY
-      currentScroll = state.shapeScroll
+    -- Check if we've moved enough to start scrolling
+    if not isDragging and math.abs(deltaY) > dragThreshold then
+      isDragging = true
     end
     
-    -- Apply boundaries
-    local layout = getLayout(vw, vh)
-    local maxScroll = 0
-    local items = state.tab == "colors" and getColors() or getShapes()
-    local maxScrollOffset = math.max(0, #items - layout.items.visibleCount)
-    
-    if state.tab == "colors" then
-      state.colorScroll = math.max(0, math.min(maxScrollOffset, state.colorScroll))
-    else
-      state.shapeScroll = math.max(0, math.min(maxScrollOffset, state.shapeScroll))
+    if isDragging then
+      -- Update appropriate scroll based on current tab
+      if state.tab == "colors" then
+        state.colorScroll = state.colorScroll + deltaY
+        currentScroll = state.colorScroll
+      else
+        state.shapeScroll = state.shapeScroll + deltaY
+        currentScroll = state.shapeScroll
+      end
+      
+      -- Apply boundaries
+      local layout = getLayout(vw, vh)
+      local items = state.tab == "colors" and getColors() or getShapes()
+      local maxScrollOffset = math.max(0, #items - layout.items.visibleCount)
+      
+      if state.tab == "colors" then
+        state.colorScroll = math.max(0, math.min(maxScrollOffset, state.colorScroll))
+      else
+        state.shapeScroll = math.max(0, math.min(maxScrollOffset, state.shapeScroll))
+      end
+      
+      touchStartY = ly
+      scrollVelocity = deltaY
     end
-    
-    touchStartY = ly
-    scrollVelocity = deltaY
   end
   return nil
 end
