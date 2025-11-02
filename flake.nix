@@ -71,7 +71,7 @@
             export ANDROID_NDK_ROOT="${androidEnv}/libexec/android-sdk/ndk/27.1.12297006"
             export ANDROID_NDK_HOME="$ANDROID_NDK_ROOT"
             export ANDROID_NDK="$ANDROID_NDK_ROOT"
-            export JAVA_HOME="${pkgs.jdk17}/lib/openjdk"
+            export JAVA_HOME="${pkgs.jdk21}/lib/openjdk"
           
           # Create local.properties
           cat > "$TEMPLATE_DIR/local.properties" << EOF
@@ -186,7 +186,7 @@ EOF
           buildInputs = with pkgs; [
             git
             zip
-            jdk17
+            jdk21
             androidEnv
             buildAndroid
           ];
