@@ -122,6 +122,8 @@ EOF
           
           if [ -f "$TEMPLATE_DIR/app/src/main/AndroidManifest.xml" ]; then
             sed -i 's/android:label="[^"]*"/android:label="Neon Invaders"/' "$TEMPLATE_DIR/app/src/main/AndroidManifest.xml" || true
+            # Fix typo in LAUNCHER category (LAUNCHER -> LAUNCHER)
+            sed -i 's/android.intent.category.LAUNCHER/android.intent.category.LAUNCHER/' "$TEMPLATE_DIR/app/src/main/AndroidManifest.xml" || true
           fi
           
           # Copy icons if available
