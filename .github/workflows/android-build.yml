@@ -23,6 +23,11 @@ jobs:
         with:
           nix_path: nixpkgs=channel:nixos-unstable
 
+      - name: Remove system Java
+        run: |
+          sudo apt-get remove -y openjdk-11-jdk openjdk-11-jre
+          sudo rm -rf /usr/lib/jvm/temurin-11-jdk-amd64
+
       - name: Free up disk space
         run: |
           sudo rm -rf /usr/share/dotnet
