@@ -116,6 +116,8 @@ EOF
             sed -i 's/compileSdk [0-9]*/compileSdk 34/' "$TEMPLATE_DIR/app/build.gradle" || true
             sed -i 's/targetSdk [0-9]*/targetSdk 34/' "$TEMPLATE_DIR/app/build.gradle" || true
             sed -i 's/buildToolsVersion "[0-9.]*/buildToolsVersion "34.0.0"/' "$TEMPLATE_DIR/app/build.gradle" || true
+            # Fix CMake policy version to avoid compatibility errors
+            sed -i 's/arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=1", "-DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON"/arguments "-DANDROID_STL=c++_shared", "-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=1", "-DCMAKE_DISABLE_PRECOMPILE_HEADERS=ON", "-DCMAKE_POLICY_VERSION_MINIMUM=3.5"/' "$TEMPLATE_DIR/app/build.gradle" || true
           fi
           
           if [ -f "$TEMPLATE_DIR/app/src/main/AndroidManifest.xml" ]; then
