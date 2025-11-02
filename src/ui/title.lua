@@ -5,6 +5,9 @@ local blink = 0
 local selected = 1
 local items = { "Start", "Boss Gallery", "Upgrades", "Cosmetics", "Settings", "Quit" }
 
+-- Version number - increment last number for each change
+local VERSION = "v0.01-beta-2"
+
 local function layoutButtons(vw, vh)
   local btnH = 56
   local btnW = math.min(360, math.floor(vw * 0.6))
@@ -73,6 +76,11 @@ function Title.draw(vw, vh)
     love.graphics.setFont(Fonts.get(22))
     love.graphics.printf(items[i], r.x, r.y + r.h/2 - 12, r.w, 'center')
   end
+
+  -- Version number (bottom left)
+  love.graphics.setFont(Fonts.get(12))
+  love.graphics.setColor(0.6, 0.6, 0.6, 0.8)
+  love.graphics.print(VERSION, 10, vh - 25)
 
   -- Help
   love.graphics.setFont(Fonts.get(16))
