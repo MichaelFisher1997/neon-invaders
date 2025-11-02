@@ -40,6 +40,7 @@ jobs:
         run: |
           export GRADLE_OPTS="-Xmx6g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8"
           export NIXPKGS_ACCEPT_ANDROID_SDK_LICENSE=1
+          unset JAVA_HOME
 
       - name: Build Android APK using flake
         run: |
