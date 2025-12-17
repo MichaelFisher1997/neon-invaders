@@ -42,3 +42,9 @@ android/love-android/local.properties
 
 # Python
 __pycache__/
+
+# Web Build
+web-build/
+
+# Local SDK configuration
+local.properties

@@ -27,16 +27,24 @@ local function pointInRect(px, py, r)
   return px >= r.x and px <= r.x + r.w and py >= r.y and py <= r.y + r.h
 end
 
-local function getTouchZones()
-  -- Entire side panels act as buttons: left = move left, right = move right
+local zones = { left = {x=0,y=0,w=0,h=0}, right = {x=0,y=0,w=0,h=0} }
+
+local function updateTouchZones()
+  -- Update zones based on current scale
   local scale, ox, oy = scaling.getScale()
   local leftPanel, _, rightPanel = scaling.getPanelsVirtual()
-  local leftRect = { x = leftPanel.x, y = leftPanel.y, w = leftPanel.w, h = leftPanel.h }
-  local rightRect = { x = rightPanel.x, y = rightPanel.y, w = rightPanel.w, h = rightPanel.h }
-  local function toScreenRect(r)
-    return { x = r.x * scale + ox, y = r.y * scale + oy, w = r.w * scale, h = r.h * scale }
-  end
-  return { left = toScreenRect(leftRect), right = toScreenRect(rightRect) }
+  
+  zones.left.x = leftPanel.x * scale + ox
+  zones.left.y = leftPanel.y * scale + oy
+  zones.left.w = leftPanel.w * scale
+  zones.left.h = leftPanel.h * scale
+  
+  zones.right.x = rightPanel.x * scale + ox
+  zones.right.y = rightPanel.y * scale + oy
+  zones.right.w = rightPanel.w * scale
+  zones.right.h = rightPanel.h * scale
+  
+  return zones
 end
 
 -- Unified pointer input handler for mouse and touch
@@ -68,7 +76,7 @@ local function handlePointerInput(x, y, isPressed, touchId)
     end
   end
   
-  local zones = getTouchZones()
+  local zones = updateTouchZones()
   if pointInRect(x, y, zones.left) then held.left = true end
   if pointInRect(x, y, zones.right) then held.right = true end
 end
@@ -93,6 +101,9 @@ end
 
 -- Main update function
 function Input.update(dt)
+  -- Clear swipe direction from previous frame at the start
+  state.swipeDirection = nil
+
   prev.fireHeld = state.fireHeld
   prev.pauseHeld = false -- pause is edge-only via keypressed
 
@@ -122,8 +133,7 @@ function Input.update(dt)
   state.firePressed = (not prev.fireHeld) and state.fireHeld
   state.pausePressed = false
   
-  -- Clear swipe direction after processing
-  state.swipeDirection = nil
+  state.pausePressed = false
 end
 
 -- Handle key press events
@@ -142,7 +152,7 @@ end
 
 function Input.drawDebug()
   -- Visualize touch zones for debugging
-  local zones = getTouchZones()
+  local zones = updateTouchZones()
   love.graphics.setColor(0, 1, 0, 0.08)
   love.graphics.rectangle("fill", zones.left.x, zones.left.y, zones.left.w, zones.left.h)
   love.graphics.setColor(1, 0, 0, 0.08)
@@ -150,7 +160,7 @@ function Input.drawDebug()
 end
 
 function Input.getZones()
-  return getTouchZones()
+  return updateTouchZones()
 end
 
 function Input.getHeld()

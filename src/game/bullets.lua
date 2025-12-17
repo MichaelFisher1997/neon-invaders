@@ -94,4 +94,8 @@ function Bullets.clear(from)
   end
 end
 
+function Bullets.getPool()
+  return pool
+end
+
 return Bullets

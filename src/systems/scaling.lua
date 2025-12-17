@@ -7,6 +7,11 @@ local canvas
 local scaleX, scaleY, scaleUniform
 local offsetX, offsetY
 local lastW, lastH
+local panels = {
+  left = { x = 0, y = 0, w = 0, h = 0 },
+  center = { x = 0, y = 0, w = 0, h = 0 },
+  right = { x = 0, y = 0, w = 0, h = 0 }
+}
 
 local function getDisplayDimensions()
   local w, h = love.graphics.getDimensions()
@@ -79,6 +84,17 @@ end
 function Scaling.setup()
   love.graphics.setDefaultFilter("nearest", "nearest", 1)
   canvas = love.graphics.newCanvas(VIRTUAL_WIDTH, VIRTUAL_HEIGHT)
+  
+  -- Initialize panels (Virtual size is constant 1280x720)
+  local lw = math.floor(VIRTUAL_WIDTH * 0.20 + 0.5)
+  local cw = math.floor(VIRTUAL_WIDTH * 0.60 + 0.5)
+  local rw = VIRTUAL_WIDTH - lw - cw
+  local h = VIRTUAL_HEIGHT
+  
+  panels.left.w, panels.left.h = lw, h
+  panels.center.x, panels.center.w, panels.center.h = lw, cw, h
+  panels.right.x, panels.right.w, panels.right.h = lw + cw, rw, h
+  
   local w, h = getDisplayDimensions()
   recomputeScale(w, h)
 end
@@ -101,15 +117,9 @@ end
 
 -- Panels in virtual coordinates: left 20%, center 60%, right 20%
 function Scaling.getPanelsVirtual()
-  local lw = math.floor(VIRTUAL_WIDTH * 0.20 + 0.5)
-  local cw = math.floor(VIRTUAL_WIDTH * 0.60 + 0.5)
-  local rw = VIRTUAL_WIDTH - lw - cw
-  local h = VIRTUAL_HEIGHT
-  local left = { x = 0, y = 0, w = lw, h = h }
-  local center = { x = lw, y = 0, w = cw, h = h }
-  local right = { x = lw + cw, y = 0, w = rw, h = h }
-  return left, center, right
+  return panels.left, panels.center, panels.right
 end
+
 
 function Scaling.pushViewport(rect)
   love.graphics.push()

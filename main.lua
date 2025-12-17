@@ -345,8 +345,12 @@ function drawDebugOverlay()
   local particleCount = 0
   
   -- Count bullets
+  -- Use cached require if possible, or require once here (it's debug code so less critical, but let's be clean)
   local Bullets = require("src.game.bullets")
-  Bullets.eachActive(function() bulletCount = bulletCount + 1 end)
+  local pool = Bullets.getPool()
+  for i = 1, #pool do
+    if pool[i].active then bulletCount = bulletCount + 1 end
+  end
   
   -- Get game state for additional info
   local curState = services.state.get()
