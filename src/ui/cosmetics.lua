@@ -4,6 +4,7 @@ local Constants = require("src.config.constants")
 local audio = require("src.audio.audio")
 local Fonts = require("src.ui.fonts")
 local InputMode = require("src.core.inputmode")
+local Neon = require("src.ui.neon_ui")
 
 local UICosmetics = {}
 
@@ -78,19 +79,19 @@ local function getLayout(vw, vh)
     vw, vh = love.graphics.getDimensions()
   end
   
-  local tabButtonsY = 110
+  local tabButtonsY = vh * 0.20
   local tabButtonW = 120
   local tabButtonH = 40
   local colorsTabX = vw/2 - tabButtonW - 10
   local shapesTabX = vw/2 + 10
   
-  local itemStartY = 170
+  local itemStartY = vh * 0.28
   local itemHeight = 80
   local itemSpacing = 10
   local itemWidth = math.min(450, vw * 0.8)
   local itemX = (vw - itemWidth) / 2
   
-  -- Show only 5 items at once
+  -- Show only 5 items at once, or fewer if height is small
   local visibleItems = 5
   local listHeight = visibleItems * itemHeight + (visibleItems - 1) * itemSpacing
   
@@ -121,19 +122,34 @@ local function drawColorItem(layout, item, index, isSelected, displayIndex)
   local rect = { x = layout.items.x, y = y, w = layout.items.width, h = layout.items.height }
   
   local isUnlocked = Cosmetics.isColorUnlocked(item.id)
-  local isSelectedColor = Cosmetics.getSelectedColor() == item.id
+  local isEquipped = Cosmetics.getSelectedColor() == item.id
   
-  -- Background
-  if isSelected then
-    love.graphics.setColor(0.3, 0.5, 0.9, 0.8)
-  else
-    love.graphics.setColor(0.1, 0.2, 0.4, 0.6)
-  end
-  love.graphics.rectangle("fill", rect.x, rect.y, rect.w, rect.h, 8, 8)
+  -- Use Neon Button style for the item container
+  -- If selected, it pulses. If not, it's a static glass panel.
+  local borderColor = isSelected and Neon.COLORS.cyan or {0.3, 0.3, 0.4}
+  local backColor = {0.05, 0.05, 0.1, 0.8}
+  
+  -- Glass Background
+  love.graphics.setColor(unpack(backColor))
+  love.graphics.rectangle("fill", rect.x, rect.y, rect.w, rect.h, 12, 12)
   
   -- Border
-  love.graphics.setColor(0.5, 0.7, 1.0, 1.0)
-  love.graphics.rectangle("line", rect.x, rect.y, rect.w, rect.h, 8, 8)
+  if isSelected then
+    -- Pulsing border for selection
+    local pulse = (math.sin(love.timer.getTime() * 5) + 1) * 0.5 * 4
+    love.graphics.setColor(Neon.COLORS.cyan[1], Neon.COLORS.cyan[2], Neon.COLORS.cyan[3], 0.3)
+    love.graphics.setLineWidth(2)
+    love.graphics.rectangle("line", rect.x - pulse, rect.y - pulse, rect.w + pulse*2, rect.h + pulse*2, 12 + pulse, 12 + pulse)
+    
+    love.graphics.setColor(Neon.COLORS.cyan)
+    love.graphics.setLineWidth(2)
+    love.graphics.rectangle("line", rect.x, rect.y, rect.w, rect.h, 12, 12)
+  else
+    -- Dim border for unselected
+    love.graphics.setColor(1, 1, 1, 0.2)
+    love.graphics.setLineWidth(1)
+    love.graphics.rectangle("line", rect.x, rect.y, rect.w, rect.h, 12, 12)
+  end
   
   -- Color preview
   local previewColor
@@ -142,30 +158,42 @@ local function drawColorItem(layout, item, index, isSelected, displayIndex)
   else
     previewColor = item.color or {1,1,1,1}
   end
+  
+  -- Glow behind preview
+  love.graphics.setColor(previewColor[1], previewColor[2], previewColor[3], 0.3)
+  love.graphics.circle("fill", rect.x + 40, rect.y + rect.h/2, 28)
+  
+  -- Actual preview circle
   love.graphics.setColor(previewColor)
-  love.graphics.circle("fill", rect.x + 30, rect.y + rect.h/2, 20)
+  love.graphics.circle("fill", rect.x + 40, rect.y + rect.h/2, 20)
+  love.graphics.setColor(1, 1, 1, 0.8)
+  love.graphics.circle("line", rect.x + 40, rect.y + rect.h/2, 20)
   
   -- Text
-  love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.setFont(Fonts.get(20))
-  love.graphics.print(item.name, rect.x + 70, rect.y + 10)
+  love.graphics.setColor(Neon.COLORS.white)
+  love.graphics.setFont(Fonts.get(22))
+  love.graphics.print(item.name, rect.x + 85, rect.y + 12)
   
   love.graphics.setFont(Fonts.get(16))
-  love.graphics.setColor(0.8, 0.8, 0.8, 1)
-  love.graphics.print(item.description, rect.x + 70, rect.y + 35)
+  love.graphics.setColor(0.7, 0.7, 0.7, 1)
+  love.graphics.print(item.description, rect.x + 85, rect.y + 40)
   
-  -- Status
+  -- Status (Right aligned)
+  local statusX = rect.x + rect.w - 15
+  local statusY = rect.y + 25
+  
   if isUnlocked then
-    if isSelectedColor then
-      love.graphics.setColor(0.5, 1.0, 0.5, 1)
-      love.graphics.printf("EQUIPPED", 0, rect.y + 15, rect.x + rect.w - 10, "right")
+    if isEquipped then
+      Neon.drawGlowText("EQUIPPED", statusX - 100, statusY - 10, Fonts.get(18), Neon.COLORS.cyan, Neon.COLORS.cyan, 1.0, 'right', 100)
     else
-      love.graphics.setColor(0.8, 0.8, 0.8, 1)
-      love.graphics.printf("OWNED", 0, rect.y + 15, rect.x + rect.w - 10, "right")
+      love.graphics.setColor(0.5, 0.5, 0.5, 1)
+      love.graphics.setFont(Fonts.get(16))
+      love.graphics.printf("OWNED", rect.x, statusY, rect.w - 20, "right")
     end
   else
-    love.graphics.setColor(1.0, 1.0, 0.5, 1)
-    love.graphics.printf(item.cost .. " credits", 0, rect.y + 15, rect.x + rect.w - 10, "right")
+    love.graphics.setColor(1.0, 0.9, 0.3, 1)
+    love.graphics.setFont(Fonts.get(16))
+    love.graphics.printf(item.cost .. " CR", rect.x, statusY, rect.w - 20, "right")
   end
 end
 
@@ -174,47 +202,63 @@ local function drawShapeItem(layout, item, index, isSelected, displayIndex)
   local rect = { x = layout.items.x, y = y, w = layout.items.width, h = layout.items.height }
   
   local isUnlocked = Cosmetics.isShapeUnlocked(item.id)
-  local isSelectedShape = Cosmetics.getSelectedShape() == item.id
+  local isEquipped = Cosmetics.getSelectedShape() == item.id
   
-  -- Background
-  if isSelected then
-    love.graphics.setColor(0.3, 0.5, 0.9, 0.8)
-  else
-    love.graphics.setColor(0.1, 0.2, 0.4, 0.6)
-  end
-  love.graphics.rectangle("fill", rect.x, rect.y, rect.w, rect.h, 8, 8)
+  local backColor = {0.05, 0.05, 0.1, 0.8}
+  
+  -- Glass Background
+  love.graphics.setColor(unpack(backColor))
+  love.graphics.rectangle("fill", rect.x, rect.y, rect.w, rect.h, 12, 12)
   
   -- Border
-  love.graphics.setColor(0.5, 0.7, 1.0, 1.0)
-  love.graphics.rectangle("line", rect.x, rect.y, rect.w, rect.h, 8, 8)
+  if isSelected then
+    -- Pulsing border for selection
+    local pulse = (math.sin(love.timer.getTime() * 5) + 1) * 0.5 * 4
+    love.graphics.setColor(Neon.COLORS.cyan[1], Neon.COLORS.cyan[2], Neon.COLORS.cyan[3], 0.3)
+    love.graphics.setLineWidth(2)
+    love.graphics.rectangle("line", rect.x - pulse, rect.y - pulse, rect.w + pulse*2, rect.h + pulse*2, 12 + pulse, 12 + pulse)
+    
+    love.graphics.setColor(Neon.COLORS.cyan)
+    love.graphics.setLineWidth(2)
+    love.graphics.rectangle("line", rect.x, rect.y, rect.w, rect.h, 12, 12)
+  else
+    -- Dim border for unselected
+    love.graphics.setColor(1, 1, 1, 0.2)
+    love.graphics.setLineWidth(1)
+    love.graphics.rectangle("line", rect.x, rect.y, rect.w, rect.h, 12, 12)
+  end
   
-  -- Shape preview (use player proportions for preview consistency)
+  -- Shape preview
   love.graphics.setColor(Cosmetics.getColor())
   local previewWidth = Constants.PLAYER.width * 2.5
   local previewHeight = Constants.PLAYER.height * 2.5
-  Cosmetics.drawSpecificShape(item.id, rect.x + 30, rect.y + rect.h/2, previewWidth, previewHeight)
+  Cosmetics.drawSpecificShape(item.id, rect.x + 40, rect.y + rect.h/2, previewWidth, previewHeight)
   
   -- Text
-  love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.setFont(Fonts.get(20))
-  love.graphics.print(item.name, rect.x + 130, rect.y + 12)
+  love.graphics.setColor(Neon.COLORS.white)
+  love.graphics.setFont(Fonts.get(22))
+  love.graphics.print(item.name, rect.x + 100, rect.y + 12)
   
   love.graphics.setFont(Fonts.get(16))
-  love.graphics.setColor(0.8, 0.8, 0.8, 1)
-  love.graphics.print(item.description, rect.x + 130, rect.y + 35)
+  love.graphics.setColor(0.7, 0.7, 0.7, 1)
+  love.graphics.print(item.description, rect.x + 100, rect.y + 40)
   
   -- Status
+  local statusX = rect.x + rect.w - 15
+  local statusY = rect.y + 25
+  
   if isUnlocked then
-    if isSelectedShape then
-      love.graphics.setColor(0.5, 1.0, 0.5, 1)
-      love.graphics.printf("EQUIPPED", 0, rect.y + 20, rect.x + rect.w - 15, "right")
+    if isEquipped then
+      Neon.drawGlowText("EQUIPPED", statusX - 100, statusY - 10, Fonts.get(18), Neon.COLORS.cyan, Neon.COLORS.cyan, 1.0, 'right', 100)
     else
-      love.graphics.setColor(0.8, 0.8, 0.8, 1)
-      love.graphics.printf("OWNED", 0, rect.y + 20, rect.x + rect.w - 15, "right")
+      love.graphics.setColor(0.5, 0.5, 0.5, 1)
+      love.graphics.setFont(Fonts.get(16))
+      love.graphics.printf("OWNED", rect.x, statusY, rect.w - 20, "right")
     end
   else
-    love.graphics.setColor(1.0, 1.0, 0.5, 1)
-    love.graphics.printf(item.cost .. " credits", 0, rect.y + 20, rect.x + rect.w - 15, "right")
+    love.graphics.setColor(1.0, 0.9, 0.3, 1)
+    love.graphics.setFont(Fonts.get(16))
+    love.graphics.printf(item.cost .. " CR", rect.x, statusY, rect.w - 20, "right")
   end
 end
 
@@ -240,50 +284,29 @@ end
 
 function UICosmetics.draw(vw, vh)
   local layout = getLayout(vw, vh)
-  
+  local credits = Economy.getCredits()
+
   -- Title
-  love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.setFont(Fonts.get(40))
-  love.graphics.printf("Cosmetics Shop", 0, 20, vw, "center")
+  Neon.drawGlowText("Cosmetics Shop", 0, vh * 0.04, Fonts.get(48), Neon.COLORS.white, Neon.COLORS.magenta, 1.0, 'center', vw)
   
-  -- Credits display
-  love.graphics.setFont(Fonts.get(22))
-  love.graphics.printf("Credits: " .. Economy.getCredits(), 0, 70, vw, "center")
+  -- Credits (Gold/Yellow for contrast)
+  Neon.drawGlowText("Credits: " .. credits, 0, vh * 0.13, Fonts.get(24), {1, 0.9, 0.4}, {1, 0.6, 0}, 1.0, 'center', vw)
+
+  -- Use layout.tabButtons for tabs
+
   
-  -- Tab buttons
-  local colorsTab = layout.tabButtons.colors
-  local shapesTab = layout.tabButtons.shapes
+  -- Draw Colors Tab
+  local isColorsSelected = (state.tab == "colors")
+  Neon.drawButton("Colors", layout.tabButtons.colors, isColorsSelected, isColorsSelected and Neon.COLORS.cyan or Neon.COLORS.white)
   
-  -- Colors tab
-  if state.tab == "colors" then
-    love.graphics.setColor(0.3, 0.5, 0.9, 0.9)
-  else
-    love.graphics.setColor(0.2, 0.4, 0.8, 0.7)
-  end
-  love.graphics.rectangle("fill", colorsTab.x, colorsTab.y, colorsTab.w, colorsTab.h, 6, 6)
-  love.graphics.setColor(0.5, 0.7, 1.0, 1.0)
-  love.graphics.rectangle("line", colorsTab.x, colorsTab.y, colorsTab.w, colorsTab.h, 6, 6)
-  love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.setFont(Fonts.get(20))
-  love.graphics.printf("Colors", colorsTab.x, colorsTab.y + 10, colorsTab.w, "center")
-  
-  -- Shapes tab
-  if state.tab == "shapes" then
-    love.graphics.setColor(0.3, 0.5, 0.9, 0.9)
-  else
-    love.graphics.setColor(0.2, 0.4, 0.8, 0.7)
-  end
-  love.graphics.rectangle("fill", shapesTab.x, shapesTab.y, shapesTab.w, shapesTab.h, 6, 6)
-  love.graphics.setColor(0.5, 0.7, 1.0, 1.0)
-  love.graphics.rectangle("line", shapesTab.x, shapesTab.y, shapesTab.w, shapesTab.h, 6, 6)
-  love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.setFont(Fonts.get(20))
-  love.graphics.printf("Shapes", shapesTab.x, shapesTab.y + 10, shapesTab.w, "center")
-  
-  -- Draw items based on current tab (with scrolling)
+  -- Draw Shapes Tab
+  local isShapesSelected = (state.tab == "shapes")
+  Neon.drawButton("Shapes", layout.tabButtons.shapes, isShapesSelected, isShapesSelected and Neon.COLORS.cyan or Neon.COLORS.white)
+
+  -- Items List
   if state.tab == "colors" then
     local colors = getColors()
-    local startIndex = state.colorScroll + 1
+    local startIndex = math.floor(state.colorScroll) + 1
     local endIndex = math.min(startIndex + layout.items.visibleCount - 1, #colors)
     
     for displayIndex = startIndex, endIndex do
@@ -312,7 +335,7 @@ function UICosmetics.draw(vw, vh)
     end
   else
     local shapes = getShapes()
-    local startIndex = state.shapeScroll + 1
+    local startIndex = math.floor(state.shapeScroll) + 1
     local endIndex = math.min(startIndex + layout.items.visibleCount - 1, #shapes)
     
     for displayIndex = startIndex, endIndex do
@@ -341,53 +364,27 @@ function UICosmetics.draw(vw, vh)
     end
   end
   
-  -- Back button
-  local back = layout.back
-  love.graphics.setColor(0.2, 0.4, 0.8, 0.8)
-  love.graphics.rectangle("fill", back.x, back.y, back.w, back.h, 6, 6)
-  love.graphics.setColor(0.5, 0.7, 1.0, 1.0)
-  love.graphics.rectangle("line", back.x, back.y, back.w, back.h, 6, 6)
-  love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.setFont(Fonts.get(18))
-  love.graphics.printf("Back", back.x, back.y + 10, back.w, "center")
+  -- Back Button
+  local backRect = layout.back
+  Neon.drawButton("Back", backRect, false, Neon.COLORS.cyan) -- Always show as static button for now
   
   -- Instructions
   love.graphics.setFont(Fonts.get(14))
   love.graphics.setColor(0.7, 0.7, 0.7, 1)
   local y = vh - 30
-  local font = Fonts.get(14)
   
-  -- Show different instructions for touch vs keyboard
-  if InputMode.isTouch() then
-    local touchText = "Touch: Single tap to select, Double-tap to purchase/equip, Swipe to scroll"
-    local textWidth = font:getWidth(touchText)
-    love.graphics.printf(touchText, 0, y, vw, "center")
+  if InputMode.isTouchMode() then
+     love.graphics.printf("Touch: Single tap to select, Double-tap to purchase/equip, Swipe to scroll", 0, y, vw, "center")
   else
-    local useText = "Use UP/DOWN "
-    local restText = " arrows to select, ENTER to purchase/equip, TAB to switch tabs, ESC to go back"
-    local useWidth = font:getWidth(useText)
-    local restWidth = font:getWidth(restText)
-    local arrowWidth = 20
-    local totalWidth = useWidth + arrowWidth + restWidth
-    local startX = (vw - totalWidth) / 2
-    love.graphics.print(useText, startX, y)
-    local arrowX = startX + useWidth
-    -- Up arrow (solid)
-    love.graphics.polygon("fill", arrowX + 3, y + 12, arrowX + 8, y + 12, arrowX + 5.5, y + 6)
-    -- Down arrow (solid)
-    love.graphics.polygon("fill", arrowX + 3, y + 8, arrowX + 8, y + 8, arrowX + 5.5, y + 14)
-    if restText then
-      love.graphics.print(restText, arrowX + arrowWidth, y)
-    end
+     love.graphics.printf("Use UP/DOWN arrows to select, ENTER to purchase/equip, TAB to switch tabs, ESC to go back", 0, y, vw, "center")
   end
-
   
   -- Message display
   if state.messageTimer > 0 then
     local alpha = math.min(1.0, state.messageTimer)
     love.graphics.setColor(1.0, 1.0, 0.5, alpha)
-  love.graphics.setFont(Fonts.get(20))
-    love.graphics.printf(state.message, 0, vh/2 - 20, vw, "center")
+    local msgY = vh * 0.85
+    Neon.drawGlowText(state.message, vw/2 - 200, msgY, Fonts.get(24), Neon.COLORS.white, Neon.COLORS.cyan, 1.0, 'center', 400)
   end
 end
 
@@ -524,26 +521,27 @@ function UICosmetics.pointerMoved(vw, vh, lx, ly)
     end
     
     if isDragging then
-      -- Update appropriate scroll based on current tab
-      if state.tab == "colors" then
-        state.colorScroll = state.colorScroll + deltaY
-        currentScroll = state.colorScroll
-      else
-        state.shapeScroll = state.shapeScroll + deltaY
-        currentScroll = state.shapeScroll
-      end
-      
       -- Apply boundaries
       local layout = getLayout(vw, vh)
       local colors = getColors()
       local shapes = getShapes()
       local maxColorScroll = math.max(0, #colors - layout.items.visibleCount)
       local maxShapeScroll = math.max(0, #shapes - layout.items.visibleCount)
+      local totalItemHeight = layout.items.height + layout.items.spacing
+
+      -- Update appropriate scroll based on current tab
+      -- Dragging UP (negative deltaY) should increase scroll index (scroll down)
+      -- Dragging DOWN (positive deltaY) should decrease scroll index (scroll up)
+      local scrollDelta = -(deltaY / totalItemHeight)
       
       if state.tab == "colors" then
+        state.colorScroll = state.colorScroll + scrollDelta
         state.colorScroll = math.max(0, math.min(maxColorScroll, state.colorScroll))
+        currentScroll = state.colorScroll
       else
+        state.shapeScroll = state.shapeScroll + scrollDelta
         state.shapeScroll = math.max(0, math.min(maxShapeScroll, state.shapeScroll))
+        currentScroll = state.shapeScroll
       end
       
       touchStartY = ly

@@ -1,5 +1,6 @@
 local Settings = require("src.systems.settings")
 local Fonts = require("src.ui.fonts")
+local Neon = require("src.ui.neon_ui")
 
 local UISettings = {}
 
@@ -99,88 +100,40 @@ local function drawSlider(x, y, value, label, isSelected)
   local w = slider.width
   local h = slider.height
   
-  -- Selection background - only show when selected
-  if isSelected then
-    love.graphics.setColor(0.153, 0.953, 1.0, 0.15)
-    -- Extend further right to cover percentage text (adds ~100px more)
-    love.graphics.rectangle("fill", x - 40, y - 50, w + 180, h + 60, 12, 12)
-  end
+  local knobX = x + w * value
+  local knobY = y + h/2
   
-  -- Label - MUCH BIGGER AND CLEARER
-  love.graphics.setFont(Fonts.get(36))
-  local labelW = love.graphics.getFont():getWidth(label)
+  -- Label (Above)
+  Neon.drawGlowText(label, x, y - 45, Fonts.get(32), Neon.COLORS.white, Neon.COLORS.cyan, 1.0)
   
-  -- Multi-layer shadow for MAXIMUM visibility
-  love.graphics.setColor(0, 0, 0, 1)
-  love.graphics.print(label, x - 3, y - 43)
-  love.graphics.print(label, x + 3, y - 43)
-  love.graphics.print(label, x, y - 46)
-  love.graphics.print(label, x, y - 40)
-  
-  -- Bright cyan glow
-  love.graphics.setColor(0.153, 0.953, 1.0, 1)
-  love.graphics.print(label, x, y - 43)
-  
-  -- Percentage - BIG AND BOLD
-  love.graphics.setFont(Fonts.get(32))
+  -- Percentage (Right)
   local percentText = string.format("%d%%", math.floor(value*100 + 0.5))
-  
-  -- Shadow
-  love.graphics.setColor(0, 0, 0, 1)
-  love.graphics.print(percentText, w + x + 18, y)
-  love.graphics.print(percentText, w + x + 22, y)
-  love.graphics.print(percentText, w + x + 20, y - 2)
-  love.graphics.print(percentText, w + x + 20, y + 2)
-  
-  -- White percentage
-  love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.print(percentText, w + x + 20, y)
-  
-  -- Track - thick black border
-  love.graphics.setColor(0, 0, 0, 1)
-  love.graphics.rectangle("fill", x - 3, y - 3, w + 6, h + 6, 12, 12)
-  
-  -- Track background - VERY DARK
-  love.graphics.setColor(0.06, 0.06, 0.1, 1)
-  love.graphics.rectangle("fill", x, y, w, h, 10, 10)
-  
-  -- Filled track - BRIGHT GLOWING CYAN
+  Neon.drawGlowText(percentText, x + w + 20, y - 5, Fonts.get(32), Neon.COLORS.white, Neon.COLORS.cyan, 1.0)
+
+  -- Track Background
+  love.graphics.setColor(0.1, 0.1, 0.15, 1)
+  love.graphics.rectangle("fill", x, y, w, h, h/2, h/2)
+  love.graphics.setColor(1, 1, 1, 0.1)
+  love.graphics.rectangle("line", x, y, w, h, h/2, h/2)
+
+  -- Filled Track
   if value > 0 then
-    love.graphics.setColor(0.153, 0.953, 1.0, 1.0)
-    love.graphics.rectangle("fill", x + 3, y + 3, (w - 6)*value, h - 6, 8, 8)
+    love.graphics.setColor(Neon.COLORS.cyan)
+    love.graphics.rectangle("fill", x, y, w * value, h, h/2, h/2)
+  end
+
+  -- Selection Glow
+  if isSelected then
+    local pulse = (math.sin(love.timer.getTime() * 5) + 1) * 0.5 * 4
+    love.graphics.setColor(Neon.COLORS.cyan[1], Neon.COLORS.cyan[2], Neon.COLORS.cyan[3], 0.3)
+    love.graphics.rectangle("line", x - pulse, y - pulse, w + pulse*2, h + pulse*2, h/2 + pulse, h/2 + pulse)
   end
   
-  -- Track bright border - MUCH BRIGHTER when selected
-  love.graphics.setColor(0.153, 0.953, 1.0, isSelected and 1 or 0.6)
-  love.graphics.setLineWidth(isSelected and 5 or 3)
-  love.graphics.rectangle("line", x, y, w, h, 10, 10)
-  love.graphics.setLineWidth(1)
-  
-  -- MUCH BIGGER knob
-  local cx = x + w*value
-  local cy = y + h/2
-  
-  -- Knob glow (huge)
-  love.graphics.setColor(0.153, 0.953, 1.0, 0.4)
-  love.graphics.circle('fill', cx, cy, 26)
-  
-  -- Knob shadow
-  love.graphics.setColor(0, 0, 0, 1)
-  love.graphics.circle('fill', cx + 2, cy + 2, 20)
-  
-  -- Knob body - BRIGHT WHITE
+  -- Knob
   love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.circle('fill', cx, cy, 20)
-  
-  -- Knob border - THICK AND BRIGHT
-  love.graphics.setColor(0.153, 0.953, 1.0, 1)
-  love.graphics.setLineWidth(5)
-  love.graphics.circle('line', cx, cy, 20)
-  love.graphics.setLineWidth(1)
-  
-  -- Knob center
-  love.graphics.setColor(0.153, 0.953, 1.0, 1)
-  love.graphics.circle('fill', cx, cy, 8)
+  love.graphics.circle("fill", knobX, knobY, h/2 + 2)
+  love.graphics.setColor(Neon.COLORS.cyan)
+  love.graphics.circle("line", knobX, knobY, h/2 + 2)
 end
 
 function UISettings.update(dt)

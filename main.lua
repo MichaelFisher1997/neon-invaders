@@ -310,11 +310,11 @@ function love.draw()
 
     -- Side panels frame + controls
     services.scaling.pushViewport(leftPanel)
-    services.hud.drawPanelFrame(leftPanel.w, leftPanel.h)
+    services.hud.drawSidePanel(leftPanel.w, leftPanel.h, 'left')
     if cur == "play" then services.hud.drawLeftControls(leftPanel.w, leftPanel.h) end
     services.scaling.popViewport()
     services.scaling.pushViewport(rightPanel)
-    services.hud.drawPanelFrame(rightPanel.w, rightPanel.h)
+    services.hud.drawSidePanel(rightPanel.w, rightPanel.h, 'right')
     if cur == "play" then services.hud.drawRightControls(rightPanel.w, rightPanel.h) end
     services.scaling.popViewport()
   end

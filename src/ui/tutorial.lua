@@ -91,7 +91,7 @@ function Tutorial.draw(vw, vh)
   
   -- Draw tutorial box (responsive sizing for mobile)
   local InputMode = require("src.core.inputmode")
-  local isMobile = InputMode.isTouch()
+  local isMobile = InputMode.isTouchMode()
   
   -- For mobile, use smaller dimensions and ensure proper centering
   local boxWidth = isMobile and math.min(350, vw * 0.7) or math.min(400, vw * 0.8)

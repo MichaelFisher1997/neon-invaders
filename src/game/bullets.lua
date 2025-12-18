@@ -1,5 +1,6 @@
 local Bullets = {}
 local Constants = require("src.config.constants")
+local Neon = require("src.ui.neon_ui")
 
 local VIRTUAL_WIDTH, VIRTUAL_HEIGHT = Constants.VIRTUAL_WIDTH, Constants.VIRTUAL_HEIGHT
 local pool = {}
@@ -55,14 +56,81 @@ function Bullets.update(dt)
   end
 end
 
-function Bullets.draw()
+local function drawPlayerBullet(b)
+  local x, y = b.x, b.y
+  local sz = b.radius or 3
+  
+  -- Trail effect (fading behind)
+  love.graphics.setColor(Neon.COLORS.cyan[1], Neon.COLORS.cyan[2], Neon.COLORS.cyan[3], 0.4)
+  love.graphics.setLineWidth(2)
+  love.graphics.line(x, y + 5, x, y + 15)
+  
+  -- Outer Glow
+  love.graphics.setColor(Neon.COLORS.blue[1], Neon.COLORS.blue[2], Neon.COLORS.blue[3], 0.3)
+  love.graphics.circle("fill", x, y, sz * 2.5)
+  
+  -- Inner Glow
+  love.graphics.setColor(Neon.COLORS.cyan[1], Neon.COLORS.cyan[2], Neon.COLORS.cyan[3], 0.8)
+  love.graphics.circle("fill", x, y, sz * 1.5)
+  
+  -- Intense Core
   love.graphics.setColor(1, 1, 1, 1)
+  love.graphics.circle("fill", x, y, sz)
+  
+  -- Piercing indicator (sparkles)
+  if b.piercing and b.piercing > 0 then
+    love.graphics.setColor(Neon.COLORS.gold[1], Neon.COLORS.gold[2], Neon.COLORS.gold[3], 0.8)
+    local t = love.timer.getTime() * 10
+    local px = x + math.sin(t) * 3
+    local py = y + math.cos(t) * 3
+    love.graphics.circle("fill", px, py, 1.5)
+  end
+end
+
+local function drawEnemyBullet(b)
+  local x, y = b.x, b.y
+  local r = b.radius or 3
+  
+  -- Pulsating Plasma Effect
+  local pulse = math.sin(love.timer.getTime() * 15) * 0.2 + 1.0
+  
+  -- Deadly Red/Purple Glow
+  love.graphics.setColor(Neon.COLORS.red[1], Neon.COLORS.red[2], Neon.COLORS.red[3], 0.25)
+  love.graphics.circle("fill", x, y, r * 2.5 * pulse)
+  
+  -- Main Orb
+  love.graphics.setColor(Neon.COLORS.magenta[1], Neon.COLORS.magenta[2], Neon.COLORS.magenta[3], 0.8)
+  love.graphics.circle("fill", x, y, r * 1.2)
+  
+  -- Bright Core
+  love.graphics.setColor(1, 1, 1, 0.9)
+  love.graphics.circle("fill", x, y, r * 0.6)
+  
+  -- Jagged Energy Ring (Rotating)
+  local angle = love.timer.getTime() * 5
+  love.graphics.push()
+  love.graphics.translate(x, y)
+  love.graphics.rotate(angle)
+  love.graphics.setColor(Neon.COLORS.red[1], Neon.COLORS.red[2], Neon.COLORS.red[3], 0.8)
+  love.graphics.setLineWidth(1.5)
+  love.graphics.rectangle("line", -r, -r, r*2, r*2) -- Rotating square looks cool/jagged
+  love.graphics.pop()
+  
+  love.graphics.setLineWidth(1)
+end
+
+function Bullets.draw()
   for i = 1, #pool do
     local b = pool[i]
     if b.active then
-      love.graphics.circle("fill", b.x, b.y, b.radius)
+      if b.from == 'player' then
+        drawPlayerBullet(b)
+      else
+        drawEnemyBullet(b)
+      end
     end
   end
+  love.graphics.setColor(1, 1, 1, 1)
 end
 
 function Bullets.eachActive(callback)

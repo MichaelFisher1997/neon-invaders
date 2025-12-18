@@ -43,12 +43,33 @@ local function shadeColor(color, delta)
          clampColorComponent(color[3] + delta)
 end
 
-local function drawPolygonTransformed(vertices, cx, cy, sx, sy)
+-- Helper for Neon Polygon Rendering
+local function drawNeonPolygon(vertices, cx, cy, sx, sy, color, alpha)
   love.graphics.push()
   love.graphics.translate(cx, cy)
   love.graphics.scale(sx, sy)
+  
+  -- Glass Fill
+  love.graphics.setColor(color[1], color[2], color[3], alpha * 0.15)
   love.graphics.polygon("fill", vertices)
+  
+  -- Glow (just drawing line with width for efficiency vs multiple passes)
+  love.graphics.setColor(color[1], color[2], color[3], alpha * 0.4)
+  love.graphics.setLineWidth(3)
+  love.graphics.polygon("line", vertices)
+  
+  -- Core Line
+  love.graphics.setColor(color[1], color[2], color[3], alpha)
+  love.graphics.setLineWidth(1.5)
+  love.graphics.polygon("line", vertices)
+  
+  -- Bright Vertex Highlights (Pointillism effect common in neon)
+  love.graphics.setColor(1, 1, 1, alpha * 0.8)
+  love.graphics.setPointSize(3)
+  -- love.graphics.points(vertices) -- Points drawing requires flattened list processing, skipping for now to safe perf
+  
   love.graphics.pop()
+  love.graphics.setLineWidth(1)
 end
 
 local BASIC_HULL = flattenPoints({
@@ -104,119 +125,99 @@ local function drawAlienBasic(alien, x, y, w, h, color, alpha)
   local cx, cy = x + w / 2, y + h / 2
   local halfW, halfH = w / 2, h / 2
 
-  love.graphics.setColor(color[1], color[2], color[3], alpha)
-  drawPolygonTransformed(BASIC_HULL, cx, cy, halfW, halfH)
-
-  local lr, lg, lb = shadeColor(color, 0.18)
-  love.graphics.setColor(lr, lg, lb, alpha)
-  -- Adjust scale for plate
-  drawPolygonTransformed(BASIC_PLATE, cx, cy + halfH * 0.05, halfW * 0.78, halfH * 0.85)
-
-  love.graphics.setColor(0, 0, 0, alpha)
-  love.graphics.circle("fill", cx - halfW * 0.28, cy - halfH * 0.1, halfH * 0.12)
-  love.graphics.circle("fill", cx + halfW * 0.28, cy - halfH * 0.1, halfH * 0.12)
-
-  love.graphics.setColor(1, 1, 1, alpha * 0.6)
-  love.graphics.polygon("fill",
-    cx - halfW * 0.26, cy + halfH * 0.55,
-    cx, cy + halfH * 0.72,
-    cx + halfW * 0.26, cy + halfH * 0.55,
-    cx, cy + halfH * 0.9
-  )
+  -- Main Hull
+  drawNeonPolygon(BASIC_HULL, cx, cy, halfW, halfH, color, alpha)
+  
+  -- Eyes (Glowing)
+  love.graphics.setColor(1, 1, 1, alpha)
+  local eyeSize = halfH * 0.15
+  love.graphics.circle("fill", cx - halfW * 0.3, cy - halfH * 0.1, eyeSize)
+  love.graphics.circle("fill", cx + halfW * 0.3, cy - halfH * 0.1, eyeSize)
+  
+  -- Neon Glow for Eyes
+  love.graphics.setColor(color[1], color[2], color[3], alpha * 0.5)
+  love.graphics.circle("fill", cx - halfW * 0.3, cy - halfH * 0.1, eyeSize * 2)
+  love.graphics.circle("fill", cx + halfW * 0.3, cy - halfH * 0.1, eyeSize * 2)
 end
 
 local function drawAlienTank(alien, x, y, w, h, color, alpha)
   local cx, cy = x + w / 2, y + h / 2
   local halfW, halfH = w / 2, h / 2
 
+  -- Heavy Body
+  drawNeonPolygon(TANK_BODY, cx, cy, halfW, halfH, color, alpha)
+  
+  -- Turret
+  local turretHeight = halfH * 0.6
   love.graphics.setColor(color[1], color[2], color[3], alpha)
-  drawPolygonTransformed(TANK_BODY, cx, cy, halfW, halfH)
-
-  local dr, dg, db = shadeColor(color, -0.2)
-  love.graphics.setColor(dr, dg, db, alpha)
-  love.graphics.rectangle("fill", cx - halfW, cy + halfH * 0.55, w, halfH * 0.4, halfH * 0.2, halfH * 0.2)
-
-  local lr, lg, lb = shadeColor(color, 0.15)
-  love.graphics.setColor(lr, lg, lb, alpha)
-  drawPolygonTransformed(TANK_PLATE, cx, cy, halfW * 0.8, halfH * 0.9)
-
-  local turretHeight = halfH * 0.5
-  love.graphics.setColor(dr, dg, db, alpha)
-  drawPolygonTransformed(TANK_TURRET, cx, cy - halfH * 0.2, halfW * 0.4, halfH * 0.9)
-
-  love.graphics.setColor(dr, dg, db, alpha)
-  love.graphics.rectangle("fill", cx - halfW * 0.05, y - halfH * 0.2, halfW * 0.1, turretHeight)
-  love.graphics.rectangle("fill", cx - halfW * 0.3, y - halfH * 0.05, halfW * 0.6, halfH * 0.18, halfH * 0.08, halfH * 0.08)
+  love.graphics.rectangle("fill", cx - halfW * 0.1, y - halfH * 0.3, halfW * 0.2, turretHeight)
+  love.graphics.setColor(1, 1, 1, alpha * 0.8) -- Bright tip
+  love.graphics.rectangle("fill", cx - halfW * 0.05, y - halfH * 0.4, halfW * 0.1, halfH * 0.2)
+  
+  -- Heavy Plating (Inner rect)
+  love.graphics.setColor(color[1], color[2], color[3], alpha * 0.3)
+  love.graphics.rectangle("line", cx - halfW * 0.6, cy - halfH * 0.2, halfW * 1.2, halfH * 0.6, 4, 4)
 end
 
 local function drawAlienSpeedy(alien, x, y, w, h, color, alpha)
   local cx, cy = x + w / 2, y + h / 2
   local halfW, halfH = w / 2, h / 2
 
+  -- Fuselage
+  drawNeonPolygon(SPEEDY_FUSELAGE, cx, cy, halfW * 0.8, halfH, color, alpha)
+  
+  -- Wings (Lines)
   love.graphics.setColor(color[1], color[2], color[3], alpha)
-  drawPolygonTransformed(SPEEDY_FUSELAGE, cx, cy, halfW * 0.9, halfH)
-
-  local lr, lg, lb = shadeColor(color, 0.22)
-  love.graphics.setColor(lr, lg, lb, alpha)
-  drawPolygonTransformed(SPEEDY_WING, cx, cy + halfH * 0.15, halfW, halfH)
-  -- Mirror wing by negative width scale
-  drawPolygonTransformed(SPEEDY_WING, cx, cy + halfH * 0.15, -halfW, halfH)
-
-  love.graphics.setColor(0, 0, 0, alpha)
-  love.graphics.circle("fill", cx, cy - halfH * 0.3, halfH * 0.14)
-
-  local trailAlpha = alpha * 0.35
-  love.graphics.setColor(color[1], color[2], color[3], trailAlpha)
-  for i = 1, 3 do
-    local offset = halfH * (0.4 + i * 0.2)
-    love.graphics.ellipse("fill", cx, cy + offset, halfW * 0.35, halfH * 0.12)
-  end
+  love.graphics.setLineWidth(2)
+  -- Left Wing
+  love.graphics.line(cx, cy, cx - halfW, cy + halfH * 0.5)
+  love.graphics.line(cx - halfW, cy + halfH * 0.5, cx - halfW * 0.5, cy + halfH * 0.8)
+  -- Right Wing
+  love.graphics.line(cx, cy, cx + halfW, cy + halfH * 0.5)
+  love.graphics.line(cx + halfW, cy + halfH * 0.5, cx + halfW * 0.5, cy + halfH * 0.8)
+  love.graphics.setLineWidth(1)
+  
+  -- Engine glow
+  local timer = love.timer.getTime() * 20
+  local flicker = math.sin(timer) * 0.2 + 0.8
+  love.graphics.setColor(1, 0.5, 0, alpha * flicker)
+  love.graphics.circle("fill", cx, cy + halfH * 0.8, halfW * 0.2)
 end
 
 local function drawAlienSniper(alien, x, y, w, h, color, alpha)
   local cx, cy = x + w / 2, y + h / 2
   local halfW, halfH = w / 2, h / 2
 
-  love.graphics.setColor(color[1], color[2], color[3], alpha)
-  drawPolygonTransformed(SNIPER_CORE, cx, cy, halfW, halfH)
-
-  local lr, lg, lb = shadeColor(color, 0.18)
-  love.graphics.setColor(lr, lg, lb, alpha)
-  drawPolygonTransformed(SNIPER_SCOPE, cx, cy - halfH * 0.1, halfW * 0.8, halfH * 0.85)
-
-  love.graphics.setColor(1, 1, 1, alpha * 0.7)
-  love.graphics.circle("line", cx, cy - halfH * 0.35, halfH * 0.35)
-  love.graphics.line(cx - halfW * 0.45, cy - halfH * 0.35, cx + halfW * 0.45, cy - halfH * 0.35)
-  love.graphics.line(cx, cy - halfH * 0.8, cx, cy + halfH * 0.1)
+  drawNeonPolygon(SNIPER_CORE, cx, cy, halfW, halfH, color, alpha)
+  
+  -- Scope Lens
+  love.graphics.setColor(1, 1, 1, alpha * 0.9)
+  love.graphics.circle("line", cx, cy - halfH * 0.2, halfH * 0.25)
+  love.graphics.setColor(1, 0, 0, alpha) -- Red dot
+  love.graphics.circle("fill", cx, cy - halfH * 0.2, 2)
+  
+  -- Crosshairs
+  love.graphics.setColor(color[1], color[2], color[3], alpha * 0.6)
+  love.graphics.line(cx, cy - halfH * 0.5, cx, cy + halfH * 0.1)
+  love.graphics.line(cx - halfW * 0.3, cy - halfH * 0.2, cx + halfW * 0.3, cy - halfH * 0.2)
 end
 
 local function drawAlienGhost(alien, x, y, w, h, color, alpha)
   local cx, cy = x + w / 2, y + h / 2
   local halfW, halfH = w / 2, h / 2
 
-  local baseAlpha = alpha * 0.85
-  love.graphics.setColor(color[1], color[2], color[3], baseAlpha)
-  drawPolygonTransformed(GHOST_HULL, cx, cy, halfW, halfH)
-
-  local wave = math.sin((alien.phaseTimer or 0) * 4 + cx * 0.02) * 0.08
-  local lr, lg, lb = shadeColor(color, 0.15)
-  love.graphics.setColor(lr, lg, lb, baseAlpha * 0.8)
-  love.graphics.polygon("fill",
-    cx - halfW * 0.75, cy + halfH * 0.4 + wave * halfH,
-    cx - halfW * 0.45, cy + halfH * 0.85 - wave * halfH,
-    cx, cy + halfH * 0.5 + wave * halfH,
-    cx + halfW * 0.45, cy + halfH * 0.85 - wave * halfH,
-    cx + halfW * 0.75, cy + halfH * 0.4 + wave * halfH
-  )
-
-  if alien.isPhased then
-    love.graphics.setColor(color[1], color[2], color[3], baseAlpha * 0.35)
-    love.graphics.circle("fill", cx, cy, math.min(halfW, halfH))
+  -- Pulsing alpha for ghost effect
+  local pulse = math.abs(math.sin(love.timer.getTime() * 3)) * 0.3 + 0.3
+  local ghostAlpha = alpha * pulse
+  
+  drawNeonPolygon(GHOST_HULL, cx, cy, halfW, halfH, color, ghostAlpha)
+  
+  -- Spooky eyes
+  if not alien.isPhased then
+      love.graphics.setColor(1, 1, 1, alpha)
+      love.graphics.circle("fill", cx - halfW * 0.25, cy - halfH * 0.1, 2)
+      love.graphics.circle("fill", cx + halfW * 0.25, cy - halfH * 0.1, 2)
   end
-
-  love.graphics.setColor(0, 0, 0, baseAlpha * 0.9)
-  love.graphics.circle("fill", cx - halfW * 0.25, cy - halfH * 0.1, halfH * 0.12)
-  love.graphics.circle("fill", cx + halfW * 0.25, cy - halfH * 0.1, halfH * 0.12)
 end
 
 local alienDrawers = {

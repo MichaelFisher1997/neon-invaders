@@ -45,17 +45,48 @@ local function computeVerticalStretch(width, height)
   return math.max(0.75, math.pow(aspect, 0.55))
 end
 
-local function drawNormalizedPolygon(points, x, y, width, height)
+-- Helper for Neon Ship Rendering
+local function drawNeonPoly(points, x, y, width, height, brightnessOffset)
   local halfW = width / 2
   local halfH = height / 2
   local stretch = computeVerticalStretch(width, height)
   halfH = halfH * stretch
+  
+  -- Transform vertices
   local vertices = {}
   for _, point in ipairs(points) do
     table.insert(vertices, x + point[1] * halfW)
     table.insert(vertices, y + point[2] * halfH)
   end
+  
+  local r, g, b, a = love.graphics.getColor()
+  
+  -- 1. Glass Fill (Transparent)
+  love.graphics.setColor(r, g, b, a * 0.15)
   love.graphics.polygon("fill", vertices)
+  
+  -- 2. Neon Glow Stroke (Wider, semi-transparent)
+  love.graphics.setColor(r, g, b, a * 0.4)
+  love.graphics.setLineWidth(3)
+  love.graphics.setLineJoin('miter')
+  love.graphics.polygon("line", vertices)
+  
+  -- 3. Core Bright Stroke (Sharp, opaque)
+  local br = 1.0 - (brightnessOffset or 0) -- Adjust brightness if needed
+  love.graphics.setColor(r*br, g*br, b*br, a)
+  love.graphics.setLineWidth(1.5)
+  love.graphics.polygon("line", vertices)
+  
+  -- 4. Vertex Highlights (Bright dots)
+  love.graphics.setColor(1, 1, 1, a * 0.8)
+  love.graphics.setPointSize(2)
+  for i=1, #vertices, 2 do
+    love.graphics.points(vertices[i], vertices[i+1])
+  end
+  
+  love.graphics.setLineWidth(1)
+  -- Reset color
+  love.graphics.setColor(r, g, b, a)
 end
 
 -- Prebuilt silhouettes use normalized coordinates in the range [-1, 1]
@@ -201,58 +232,55 @@ local STAR_CORE = {
 }
 
 local function drawTriangleShip(x, y, width, height)
-  drawNormalizedPolygon(TRIANGLE_HULL, x, y, width, height)
-  withColorOffset(0.18, function()
-    drawNormalizedPolygon(TRIANGLE_COCKPIT, x, y, width * 0.6, height * 0.85)
-  end)
-  withColorOffset(-0.2, function()
-    drawNormalizedPolygon(TRIANGLE_THRUSTER, x, y, width * 0.7, height)
-  end)
+  drawNeonPoly(TRIANGLE_HULL, x, y, width, height)
+  
+  -- Bright Cockpit
+  love.graphics.setColor(1, 1, 1, 0.8)
+  drawNeonPoly(TRIANGLE_COCKPIT, x, y, width * 0.5, height * 0.6)
+  
+  -- Thruster Glow
+  local flicker = math.sin(love.timer.getTime() * 20) * 0.2 + 0.8
+  local r, g, b, a = love.graphics.getColor()
+  love.graphics.setColor(r, g, b, a * flicker)
+  drawNeonPoly(TRIANGLE_THRUSTER, x, y, width * 0.6, height)
 end
 
 local function drawDiamondShip(x, y, width, height)
-  drawNormalizedPolygon(DIAMOND_HULL, x, y, width, height)
-  withColorOffset(0.15, function()
-    drawNormalizedPolygon(DIAMOND_COCKPIT, x, y, width * 0.65, height * 0.8)
-  end)
-  withColorOffset(-0.18, function()
-    drawNormalizedPolygon({
-      {0.24, 1.0},
-      {0.36, 0.7},
-      {0.2, 0.72},
-      {0.12, 0.96},
-      {-0.12, 0.96},
-      {-0.2, 0.72},
-      {-0.36, 0.7},
-      {-0.24, 1.0},
-    }, x, y, width * 0.85, height)
-  end)
+  drawNeonPoly(DIAMOND_HULL, x, y, width, height)
+  
+  -- Inner Core
+  love.graphics.setColor(1, 1, 1, 0.9)
+  drawNeonPoly(DIAMOND_COCKPIT, x, y, width * 0.5, height * 0.6)
+  
+  -- Engine Accents
+  drawNeonPoly(DIAMOND_ENGINES, x, y, width * 0.8, height)
 end
 
 local function drawHexagonShip(x, y, width, height)
-  drawNormalizedPolygon(HEXAGON_HULL, x, y, width, height)
-  withColorOffset(-0.12, function()
-    drawNormalizedPolygon(HEXAGON_SHIELDS, x, y, width, height)
-    local mirrored = {}
-    for i = #HEXAGON_SHIELDS, 1, -1 do
-      local point = HEXAGON_SHIELDS[i]
-      table.insert(mirrored, { -point[1], point[2] })
-    end
-    drawNormalizedPolygon(mirrored, x, y, width, height)
-  end)
-  withColorOffset(0.17, function()
-    drawNormalizedPolygon(HEXAGON_SPINE, x, y, width * 0.65, height * 0.85)
-  end)
+  drawNeonPoly(HEXAGON_HULL, x, y, width, height)
+  
+  -- Shields (Side plating)
+  drawNeonPoly(HEXAGON_SHIELDS, x, y, width, height)
+  local mirrored = {}
+  for i = #HEXAGON_SHIELDS, 1, -1 do
+    local point = HEXAGON_SHIELDS[i]
+    table.insert(mirrored, { -point[1], point[2] })
+  end
+  drawNeonPoly(mirrored, x, y, width, height)
+  
+  -- Central Spine (Darker/Sleek)
+  drawNeonPoly(HEXAGON_SPINE, x, y, width * 0.65, height * 0.85)
 end
 
 local function drawArrowShip(x, y, width, height)
-  drawNormalizedPolygon(ARROW_HULL, x, y, width, height)
-  withColorOffset(0.2, function()
-    drawNormalizedPolygon(ARROW_COCKPIT, x, y, width * 0.65, height * 0.75)
-  end)
-  withColorOffset(-0.22, function()
-    drawNormalizedPolygon(ARROW_TAIL, x, y, width * 0.75, height)
-  end)
+  drawNeonPoly(ARROW_HULL, x, y, width, height)
+  
+  -- Sharp Cockpit
+  love.graphics.setColor(1, 1, 1, 0.9)
+  drawNeonPoly(ARROW_COCKPIT, x, y, width * 0.6, height * 0.65)
+  
+  -- Split Tail
+  drawNeonPoly(ARROW_TAIL, x, y, width * 0.75, height)
 end
 
 local function drawCircleShip(x, y, width, height)
@@ -260,47 +288,59 @@ local function drawCircleShip(x, y, width, height)
   local baseRadius = width * 0.25
   local tallRadius = baseRadius * stretch * 0.9
   local shortRadius = math.min(height / 2, tallRadius)
+  
+  local r, g, b, a = love.graphics.getColor()
+  
+  -- 1. Glass Orbit
+  love.graphics.setColor(r, g, b, a * 0.15)
   love.graphics.ellipse("fill", x, y, baseRadius, shortRadius)
-  withColorOffset(-0.18, function()
-    love.graphics.ellipse("fill", x, y, baseRadius * 0.65, shortRadius * 0.65)
-  end)
-  withColorOffset(-0.25, function()
-    local podOffsetX = baseRadius * 1.15
-    love.graphics.circle("fill", x - podOffsetX, y + shortRadius * 0.1, baseRadius * 0.32)
-    love.graphics.circle("fill", x + podOffsetX, y + shortRadius * 0.1, baseRadius * 0.32)
-    love.graphics.polygon("fill",
-      x - baseRadius * 0.28, y + shortRadius * 1.05,
-      x - baseRadius * 0.1, y + shortRadius * 0.58,
-      x, y + shortRadius * 0.82,
-      x + baseRadius * 0.1, y + shortRadius * 0.58,
-      x + baseRadius * 0.28, y + shortRadius * 1.05
-    )
-  end)
-  withColorOffset(0.2, function()
-    love.graphics.ellipse("fill", x, y - shortRadius * 0.45, baseRadius * 0.32, shortRadius * 0.28)
-  end)
+  
+  -- 2. Neon Ring
+  love.graphics.setColor(r, g, b, a * 0.8)
+  love.graphics.setLineWidth(2.5)
+  love.graphics.ellipse("line", x, y, baseRadius, shortRadius)
+  
+  -- 3. Side Pods (Neon)
+  local podOffsetX = baseRadius * 1.15
+  love.graphics.circle("fill", x - podOffsetX, y + shortRadius * 0.1, baseRadius * 0.25)
+  love.graphics.circle("fill", x + podOffsetX, y + shortRadius * 0.1, baseRadius * 0.25)
+  
+  love.graphics.setColor(1, 1, 1, a)
+  love.graphics.circle("fill", x - podOffsetX, y + shortRadius * 0.1, baseRadius * 0.1)
+  love.graphics.circle("fill", x + podOffsetX, y + shortRadius * 0.1, baseRadius * 0.1)
+  
+  -- 4. Central Core
+  love.graphics.setColor(r, g, b, a * 0.3)
+  love.graphics.ellipse("fill", x, y, baseRadius * 0.5, shortRadius * 0.5)
+  love.graphics.setColor(1, 1, 1, a)
+  love.graphics.circle("fill", x, y, baseRadius * 0.15)
+  
+  love.graphics.setLineWidth(1)
 end
 
 local function drawStarShip(x, y, width, height)
-  drawNormalizedPolygon(STAR_HULL, x, y, width, height)
-  withColorOffset(0.18, function()
-    drawNormalizedPolygon(STAR_CORE, x, y, width * 0.75, height * 0.8)
-  end)
-  withColorOffset(-0.2, function()
-    local wing = {
-      {0.54, 0.12},
-      {0.76, 0.32},
-      {0.52, 0.48},
-      {0.32, 0.18},
-    }
-    drawNormalizedPolygon(wing, x, y, width, height)
-    local mirrored = {}
-    for i = #wing, 1, -1 do
-      local point = wing[i]
-      table.insert(mirrored, { -point[1], point[2] })
-    end
-    drawNormalizedPolygon(mirrored, x, y, width, height)
-  end)
+  drawNeonPoly(STAR_HULL, x, y, width, height)
+  
+  -- Burning Core
+  local flicker = math.sin(love.timer.getTime() * 10) * 0.2 + 0.8
+  local r, g, b, a = love.graphics.getColor()
+  love.graphics.setColor(r, g, b, a * flicker)
+  drawNeonPoly(STAR_CORE, x, y, width * 0.6, height * 0.7)
+  
+  -- Wings
+  local wing = {
+    {0.54, 0.12},
+    {0.76, 0.32},
+    {0.52, 0.48},
+    {0.32, 0.18},
+  }
+  drawNeonPoly(wing, x, y, width, height)
+  local mirrored = {}
+  for i = #wing, 1, -1 do
+    local point = wing[i]
+    table.insert(mirrored, { -point[1], point[2] })
+  end
+  drawNeonPoly(mirrored, x, y, width, height)
 end
 
 local shapeDrawers = {

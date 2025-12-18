@@ -9,6 +9,7 @@ local music
 function Audio.load()
   sounds = {
     ui_click = Synth.beep(660, 0.07, 'sine'),
+    ui_hover = Synth.beep(880, 0.03, 'sine'),
     player_shoot = Synth.beep(880, 0.06, 'triangle'),
     enemy_shoot = Synth.beep(330, 0.06, 'square'),
     hit = Synth.beep(200, 0.10, 'triangle'),

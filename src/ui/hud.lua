@@ -1,6 +1,7 @@
 local HUD = {}
 local Input = require("src.core.input")
 local Fonts = require("src.ui.fonts")
+local Neon = require("src.ui.neon_ui")
 
 local COLORS = {
   cyan = {0.153, 0.953, 1.0},
@@ -77,126 +78,60 @@ function HUD.draw(score, lives, wave, vw, vh)
   local panelH = 60  -- Fixed height, boss bar goes below
   local sectionW = vw / 4
   
-  -- Dark background
+  -- Dark Glass Background
   love.graphics.setColor(0.02, 0.02, 0.05, 0.95)
   love.graphics.rectangle("fill", 0, 0, vw, panelH)
   
   -- Bottom glow line
-  if hasBoss then
-    love.graphics.setColor(1.0, 0.182, 0.651, 0.8)
-  else
-    love.graphics.setColor(0.153, 0.953, 1.0, 0.7)
-  end
+  local lineColor = hasBoss and Neon.COLORS.magenta or Neon.COLORS.cyan
+  love.graphics.setColor(lineColor[1], lineColor[2], lineColor[3], 0.8)
   love.graphics.setLineWidth(3)
   love.graphics.line(0, panelH - 2, vw, panelH - 2)
   love.graphics.setLineWidth(1)
   
-  -- Vertical separators between sections
-  love.graphics.setColor(0.153, 0.953, 1.0, 0.15)
-  love.graphics.setLineWidth(1)
+  -- Vertical separators (Subtle)
+  love.graphics.setColor(lineColor[1], lineColor[2], lineColor[3], 0.2)
   for i = 1, 3 do
     local x = sectionW * i
-    love.graphics.line(x, 8, x, panelH - 8)
+    love.graphics.line(x, 15, x, panelH - 15)
   end
-  love.graphics.setLineWidth(1)
   
   local labelFont = Fonts.get(11)
   local valueFont = Fonts.get(24)
-  local padding = 12
+  local padding = 20
+  local labelY = 10
+  local valueY = 24
   
-  -- ===== SECTION 1: SCORE (with RGB glow effect) =====
-  local s1X = padding
+  -- ===== SECTION 1: SCORE =====
+  Neon.drawGlowText("SCORE", padding, labelY, labelFont, Neon.COLORS.cyan, Neon.COLORS.cyan, 1.0, 'left', sectionW)
+  Neon.drawGlowText(tostring(score), padding, valueY, valueFont, Neon.COLORS.white, Neon.COLORS.cyan, 1.0, 'left', sectionW)
   
-  love.graphics.setFont(labelFont)
-  love.graphics.setColor(0.153, 0.953, 1.0, 0.85)
-  love.graphics.print("SCORE", s1X, 10)
-  
-  love.graphics.setFont(valueFont)
-  local scoreText = tostring(score)
-  
-  -- RGB glow effect - MUCH MORE VISIBLE
-  -- Outer glow layer (large offset)
-  love.graphics.setColor(1, 0, 0, 0.7)
-  love.graphics.print(scoreText, s1X - 3, 24)
-  love.graphics.print(scoreText, s1X - 4, 24)
-  
-  love.graphics.setColor(0, 1, 0, 0.7)
-  love.graphics.print(scoreText, s1X + 3, 24)
-  love.graphics.print(scoreText, s1X + 4, 24)
-  
-  love.graphics.setColor(0, 0, 1, 0.7)
-  love.graphics.print(scoreText, s1X, 24 - 3)
-  love.graphics.print(scoreText, s1X, 24 - 4)
-  
-  love.graphics.setColor(1, 1, 0, 0.7)
-  love.graphics.print(scoreText, s1X, 24 + 3)
-  love.graphics.print(scoreText, s1X, 24 + 4)
-  
-  -- Inner glow layer (medium offset)
-  love.graphics.setColor(1, 0, 1, 0.8)
-  love.graphics.print(scoreText, s1X - 2, 24 - 2)
-  
-  love.graphics.setColor(0, 1, 1, 0.8)
-  love.graphics.print(scoreText, s1X + 2, 24 + 2)
-  
-  -- Shadow (dark)
-  love.graphics.setColor(0, 0, 0, 0.8)
-  love.graphics.print(scoreText, s1X + 1, 24 + 1)
-  
-  -- Base bright white (neon core)
-  love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.print(scoreText, s1X, 24)
-  
-  -- ===== SECTION 2: CREDITS (same gold color) =====
+  -- ===== SECTION 2: CREDITS =====
   local s2X = sectionW + padding
+  local gold = {1.0, 0.84, 0.0} -- Gold color
+  Neon.drawGlowText("CREDITS", s2X, labelY, labelFont, gold, gold, 1.0, 'left', sectionW)
+  Neon.drawGlowText(tostring(credits), s2X, valueY, valueFont, gold, gold, 1.0, 'left', sectionW)
   
-  -- Use exact same gold color for both label and number
-  local goldR, goldG, goldB = 1.0, 0.75, 0.1
-  
-  love.graphics.setFont(labelFont)
-  love.graphics.setColor(goldR, goldG, goldB, 1)
-  love.graphics.print("CREDITS", s2X, 10)
-  
-  love.graphics.setFont(valueFont)
-  love.graphics.setColor(goldR, goldG, goldB, 1)
-  local creditsText = tostring(credits)
-  love.graphics.print(creditsText, s2X, 24)
+  -- Multiplier
   local multiplier = Economy.getCreditMultiplier()
-  local multiplierText = string.format("x%d", multiplier or 1)
-  local multFont = Fonts.get(16)
-  love.graphics.setFont(multFont)
-  love.graphics.print(multiplierText, s2X + valueFont:getWidth(creditsText) + 12, 30)
-  
-  -- ===== SECTION 3: LIVES (turns red at 1) =====
-  local s3X = sectionW * 2 + padding
-  
-  -- Color changes based on lives
-  local livesColor = {0.153, 0.953, 1.0}  -- Default cyan
-  if lives == 1 then
-    livesColor = {1.0, 0.2, 0.2}  -- Red when critical
+  if multiplier > 1 then
+      local multText = string.format("x%d", multiplier)
+      local creditsWidth = valueFont:getWidth(tostring(credits))
+      Neon.drawGlowText(multText, s2X + creditsWidth + 10, valueY + 4, Fonts.get(16), Neon.COLORS.magenta, Neon.COLORS.magenta, 1.0, 'left', 50)
   end
+
+  -- ===== SECTION 3: LIVES =====
+  local s3X = sectionW * 2 + padding
+  local livesColor = (lives <= 1) and Neon.COLORS.red or Neon.COLORS.cyan
+  Neon.drawGlowText("LIVES", s3X, labelY, labelFont, livesColor, livesColor, 1.0, 'left', sectionW)
+  Neon.drawGlowText(tostring(lives), s3X, valueY, valueFont, Neon.COLORS.white, livesColor, 1.0, 'left', sectionW)
   
-  love.graphics.setFont(labelFont)
-  love.graphics.setColor(livesColor[1], livesColor[2], livesColor[3], 0.85)
-  love.graphics.print("LIVES", s3X, 10)
-  
-  -- Lives as number (like other stats)
-  love.graphics.setFont(valueFont)
-  love.graphics.setColor(livesColor[1], livesColor[2], livesColor[3], 1.0)
-  love.graphics.print(tostring(lives), s3X, 24)
-  
-  -- ===== SECTION 4: WAVE (color changes per wave) =====
+  -- ===== SECTION 4: WAVE =====
   local s4X = sectionW * 3 + padding
-  
-  love.graphics.setFont(labelFont)
-  love.graphics.setColor(0.153, 0.953, 1.0, 0.85)
-  love.graphics.print("WAVE", s4X, 10)
-  
-  -- Wave number with color based on wave number
-  love.graphics.setFont(valueFont)
   local r, g, b = getWaveColor(wave)
-  love.graphics.setColor(r, g, b, 1)
-  love.graphics.print(tostring(wave), s4X, 24)
+  local waveColor = {r, g, b}
+  Neon.drawGlowText("WAVE", s4X, labelY, labelFont, Neon.COLORS.cyan, Neon.COLORS.cyan, 1.0, 'left', sectionW)
+  Neon.drawGlowText(tostring(wave), s4X, valueY, valueFont, Neon.COLORS.white, waveColor, 1.0, 'left', sectionW)
   
   -- Boss health bar (if boss exists)
   HUD.drawBossHealth(vw, panelH)
@@ -210,79 +145,72 @@ function HUD.drawBossHealth(vw, panelH)
   end
 end
 
+local function drawNeonArrow(cx, cy, size, direction, color, isPressed)
+    local r, g, b = unpack(color)
+    local baseAlpha = isPressed and 1.0 or 0.6
+    
+    -- Arrow points
+    local p1, p2, p3
+    if direction == 'left' then
+        p1 = {cx + size, cy - size}
+        p2 = {cx - size, cy}
+        p3 = {cx + size, cy + size}
+    else
+        p1 = {cx - size, cy - size}
+        p2 = {cx + size, cy}
+        p3 = {cx - size, cy + size}
+    end
+    
+    -- Outer glow (3 layers)
+    for i = 3, 1, -1 do
+        local offset = i * 4
+        love.graphics.setColor(r, g, b, 0.1 / i)
+        local gp1, gp2, gp3
+        -- Scale points outward for glow
+        if direction == 'left' then
+           love.graphics.polygon('fill', p1[1]+offset, p1[2]-offset, p2[1]-offset, p2[2], p3[1]+offset, p3[2]+offset)
+        else
+           love.graphics.polygon('fill', p1[1]-offset, p1[2]-offset, p2[1]+offset, p2[2], p3[1]-offset, p3[2]+offset)
+        end
+    end
+
+    -- Main Arrow Fill
+    love.graphics.setColor(r, g, b, baseAlpha)
+    love.graphics.polygon('fill', p1[1], p1[2], p2[1], p2[2], p3[1], p3[2])
+    
+    -- Core (White/Bright)
+    if isPressed then
+        love.graphics.setColor(1, 1, 1, 0.5)
+        love.graphics.polygon('fill', p1[1], p1[2], p2[1], p2[2], p3[1], p3[2])
+    end
+end
+
 function HUD.drawLeftControls(vw, vh)
   local held = Input.getHeld()
-  local swipeDir = Input.getSwipeDirection()
-  -- Entire panel: MOVE LEFT
-  -- Base overlay
-  setColorA(COLORS.white, held.left and 0.20 or 0.08)
-  love.graphics.rectangle('fill', 0, 0, vw, vh)
-  -- Big left arrow centered
-  local ax, ay, aw, ah = vw*0.10, vh*0.25, vw*0.80, vh*0.50
-  setColorA(COLORS.white, held.left and 0.95 or 0.70)
-  love.graphics.polygon('fill', ax + aw*0.66, ay + ah*0.30, ax + aw*0.36, ay + ah*0.50, ax + aw*0.66, ay + ah*0.70)
+  local color = Neon.COLORS.cyan
+  local isPressed = held.left
   
-  -- Swipe indicator
-  if swipeDir then
-    setColorA(COLORS.cyan, 0.6)
-    local swipeY = vh * 0.75
-    local swipeCX = vw / 2
-    if swipeDir == "left" then
-      -- Left arrow
-      love.graphics.polygon('fill', swipeCX + 20, swipeY, swipeCX - 10, swipeY - 10, swipeCX - 10, swipeY + 10)
-    else
-      -- Right arrow
-      love.graphics.polygon('fill', swipeCX - 20, swipeY, swipeCX + 10, swipeY - 10, swipeCX + 10, swipeY + 10)
-    end
-    Fonts.set(14)
-    local swipeText = swipeDir == "left" and "SWIPE LEFT" or "SWIPE RIGHT"
-    local tw = love.graphics.getFont():getWidth(swipeText)
-    love.graphics.print(swipeText, (vw - tw)/2, swipeY + 20)
-  end
+  -- Neon Arrow
+  local cx, cy = vw/2, vh/2
+  local size = math.min(vw, vh) * 0.2
+  drawNeonArrow(cx, cy, size, 'left', color, isPressed)
   
-  -- Label
-  setColorA(COLORS.cyan, 0.85)
-  Fonts.set(16)
-  local label = 'MOVE LEFT'
-  local tw = love.graphics.getFont():getWidth(label)
-  love.graphics.print(label, (vw - tw)/2, vh*0.06)
+  -- Label (Subtle)
+  Neon.drawGlowText("LEFT", 0, vh * 0.8, Fonts.get(16), Neon.COLORS.white, color, 0.8, 'center', vw)
 end
 
 function HUD.drawRightControls(vw, vh)
   local held = Input.getHeld()
-  local swipeDir = Input.getSwipeDirection()
-  -- Entire panel: MOVE RIGHT
-  setColorA(COLORS.white, held.right and 0.20 or 0.08)
-  love.graphics.rectangle('fill', 0, 0, vw, vh)
-  -- Big right arrow centered
-  local ax, ay, aw, ah = vw*0.10, vh*0.25, vw*0.80, vh*0.50
-  setColorA(COLORS.white, held.right and 0.95 or 0.70)
-  love.graphics.polygon('fill', ax + aw*0.34, ay + ah*0.30, ax + aw*0.64, ay + ah*0.50, ax + aw*0.34, ay + ah*0.70)
+  local color = Neon.COLORS.magenta
+  local isPressed = held.right
   
-  -- Swipe indicator
-  if swipeDir then
-    setColorA(COLORS.magenta, 0.6)
-    local swipeY = vh * 0.75
-    local swipeCX = vw / 2
-    if swipeDir == "left" then
-      -- Left arrow
-      love.graphics.polygon('fill', swipeCX + 20, swipeY, swipeCX - 10, swipeY - 10, swipeCX - 10, swipeY + 10)
-    else
-      -- Right arrow
-      love.graphics.polygon('fill', swipeCX - 20, swipeY, swipeCX + 10, swipeY - 10, swipeCX + 10, swipeY + 10)
-    end
-    Fonts.set(14)
-    local swipeText = swipeDir == "left" and "SWIPE LEFT" or "SWIPE RIGHT"
-    local tw = love.graphics.getFont():getWidth(swipeText)
-    love.graphics.print(swipeText, (vw - tw)/2, swipeY + 20)
-  end
+  -- Neon Arrow
+  local cx, cy = vw/2, vh/2
+  local size = math.min(vw, vh) * 0.2
+  drawNeonArrow(cx, cy, size, 'right', color, isPressed)
   
-  -- Label
-  setColorA(COLORS.magenta, 0.85)
-  Fonts.set(16)
-  local label = 'MOVE RIGHT'
-  local tw = love.graphics.getFont():getWidth(label)
-  love.graphics.print(label, (vw - tw)/2, vh*0.06)
+  -- Label (Subtle)
+  Neon.drawGlowText("RIGHT", 0, vh * 0.8, Fonts.get(16), Neon.COLORS.white, color, 0.8, 'center', vw)
 end
 
 -- Legacy function - credits now drawn in main HUD
@@ -335,13 +263,35 @@ function HUD.drawEvents(vw, vh, hudPanelHeight)
   -- Deprecated - using compact version in HUD
 end
 
-function HUD.drawPanelFrame(vw, vh)
-  love.graphics.setColor(1,1,1,0.06)
+-- Draw consistent side panel backgrounds (Glass + Neon Border)
+function HUD.drawSidePanel(vw, vh, side)
+  -- Glass Panel Background
+  love.graphics.setColor(0.05, 0.05, 0.1, 0.85)
   love.graphics.rectangle('fill', 0, 0, vw, vh)
-  love.graphics.setColor(1,1,1,0.18)
+  
+  -- Border color depends on side
+  local color = (side == 'left') and Neon.COLORS.cyan or Neon.COLORS.magenta
+  
+  -- Neon Border
+  love.graphics.setColor(color[1], color[2], color[3], 0.8)
   love.graphics.setLineWidth(2)
-  love.graphics.rectangle('line', 2, 2, vw-4, vh-4, 8, 8)
+  
+  if side == 'left' then
+    -- Right border for left panel
+    love.graphics.line(vw, 0, vw, vh)
+  else
+    -- Left border for right panel
+    love.graphics.line(0, 0, 0, vh)
+  end
   love.graphics.setLineWidth(1)
+end
+
+function HUD.drawPanelFrame(vw, vh)
+  -- Deprecated, redirects to drawSidePanel if possible?
+  -- But drawPanelFrame signature doesn't have side.
+  -- Kept for compatibility if called elsewhere, but we will update main.lua to use drawSidePanel
+  love.graphics.setColor(1,1,1,0.05)
+  love.graphics.rectangle('fill', 0, 0, vw, vh)
 end
 
 return HUD

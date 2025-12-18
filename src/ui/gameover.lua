@@ -1,6 +1,7 @@
 local Highscores = require("src.systems.highscores")
 local Fonts = require("src.ui.fonts")
 local InputMode = require("src.core.inputmode")
+local Neon = require("src.ui.neon_ui")
 
 local GameOver = {}
 
@@ -66,47 +67,51 @@ function GameOver.draw(score, vw, vh)
     Highscores.submit(score)
     submitted = true
   end
-  love.graphics.setColor(0, 0, 0, 0.55)
+
+  local layout = layoutButtons(vw, vh)
+  
+  -- Dim background
+  love.graphics.setColor(0, 0, 0, 0.85)
   love.graphics.rectangle("fill", 0, 0, vw, vh)
-  love.graphics.setColor(1, 1, 1, 1)
-  local rects, buttonsY, titleFont, scoreFont = layoutButtons(vw, vh)
-
-  love.graphics.setFont(titleFont)
-  love.graphics.printf("Game Over", 0, buttonsY - titleFont:getHeight() - scoreFont:getHeight() - 28, vw, "center")
-
-  love.graphics.setFont(scoreFont)
-  love.graphics.printf("Score: " .. tostring(score), 0, buttonsY - scoreFont:getHeight() - 8, vw, "center")
+  
+  -- Title
+  Neon.drawGlowText("GAME OVER", 0, layout[1].y - 120, Fonts.get(48), Neon.COLORS.white, Neon.COLORS.red, 1.0, 'center', vw)
+  
+  -- Current Score
+  Neon.drawGlowText("Score: " .. tostring(score), 0, layout[1].y - 60, Fonts.get(24), Neon.COLORS.cyan, Neon.COLORS.cyan, 1.0, 'center', vw)
 
   -- Draw buttons
-  for i, r in ipairs(rects) do
+  for i, r in ipairs(layout) do
     local isSel = (i == selected)
-    love.graphics.setColor(1,1,1,1)
-    love.graphics.rectangle('line', r.x, r.y, r.w, r.h, 10, 10)
-    if isSel then
-      love.graphics.setColor(0.153, 0.953, 1.0, 0.25)
-      love.graphics.rectangle('fill', r.x, r.y, r.w, r.h, 10, 10)
-    end
-    love.graphics.setColor(1,1,1,1)
-    love.graphics.setFont(Fonts.get(20))
-    love.graphics.printf(options[i].label, r.x, r.y + r.h/2 - 12, r.w, 'center')
+    -- Color code buttons: Retry=Green, Menu=Cyan, Quit=Red
+    local color = Neon.COLORS.cyan
+    if i == 1 then color = Neon.COLORS.green end
+    if i == 3 then color = Neon.COLORS.red end
+    
+    -- Pass 'isSel' as second argument to drawButton (isHovered/isSelected)
+    -- Note: Neon.drawButton signature is (text, rect, isHovered, color)
+    Neon.drawButton(options[i].label, r, isSel, color)
   end
 
   -- High scores below
   local list = Highscores.list()
-  love.graphics.setFont(Fonts.get(18))
-  local y = rects[#rects].y + rects[#rects].h + 28
-  love.graphics.printf("High Scores:", 0, y, vw, 'center')
+  local y = layout[#layout].y + layout[#layout].h + 30
+  
+  Neon.drawGlowText("HIGH SCORES", 0, y, Fonts.get(20), Neon.COLORS.gold, Neon.COLORS.gold, 1.0, 'center', vw)
+  
   for i,entry in ipairs(list) do
-    local line = string.format("%d) %d", i, entry.score)
-    love.graphics.printf(line, 0, y + 22*i, vw, 'center')
+    local line = string.format("%d. %d", i, entry.score)
+    -- Top score glow
+    local color = (i == 1) and Neon.COLORS.gold or Neon.COLORS.white
+    local glowColor = (i == 1) and Neon.COLORS.gold or Neon.COLORS.blue
+    Neon.drawGlowText(line, 0, y + 25 + 25*i, Fonts.get(18), color, glowColor, 0.8, 'center', vw)
   end
 
   -- Help text
-  local os = (love.system and love.system.getOS) and love.system.getOS() or ""
-  local help = (os == 'Android' or os == 'iOS') and 'Tap a button' or 'Up/Down to choose, Enter to confirm'
-  love.graphics.setColor(1,1,1,0.85)
-  love.graphics.setFont(Fonts.get(16))
-  love.graphics.printf(help, 0, vh - 24 - 16, vw, 'center')
+  local help = InputMode.isTouchMode() and 'Tap to select' or 'Arrows/WASD to choose, Enter to confirm'
+  love.graphics.setColor(1,1,1,0.5)
+  love.graphics.setFont(Fonts.get(14))
+  love.graphics.printf(help, 0, vh - 40, vw, 'center')
 end
 
 return GameOver

@@ -1,6 +1,7 @@
 local BossGallery = {}
 local Fonts = require("src.ui.fonts")
 local InputMode = require("src.core.inputmode")
+local Neon = require("src.ui.neon_ui")
 
 local selected = 1
 local scroll = 0
@@ -76,6 +77,25 @@ local bossInfo = {
   }
 }
 
+local function getLayout(vw, vh)
+  return {
+    back = { x = vw - 140, y = 20, w = 120, h = 40 },
+    list = {
+      x = 20,
+      startY = 80,
+      w = 300,
+      itemHeight = 110, -- Restore height
+      spacing = 10
+    },
+    preview = {
+      x = 340,
+      y = 80,
+      w = vw - 360, -- Remaining width
+      h = vh - 160
+    }
+  }
+end
+
 function BossGallery.enter()
   selected = 1
   scroll = 0
@@ -146,18 +166,19 @@ end
 function BossGallery.update(dt)
   local BossBase = require("src.game.boss.base")
   local vw, vh = BossBase.getVirtualSize()
+  local layout = getLayout(vw, vh)
+  local cardStride = layout.list.itemHeight + layout.list.spacing
   
   -- Bounded smooth scrolling to always show 5-6 cards
-  local cardHeight = 120  -- Updated to match new spacing
-  local visibleCards = 5  -- Show 5 cards for better visibility
-  local maxVisibleHeight = visibleCards * cardHeight
-  local listHeight = #bossInfo * cardHeight
-  local maxScroll = 0  -- Can't scroll above first card
-  local minScroll = -math.max(0, listHeight - maxVisibleHeight)  -- Scroll to show last cards
+  local visibleCards = 5
+  local maxVisibleHeight = visibleCards * cardStride
+  local listHeight = #bossInfo * cardStride
+  local maxScroll = 0
+  local minScroll = -math.max(0, listHeight - maxVisibleHeight)
   
   -- Only auto-scroll to selected boss when not manually scrolling
   if not isDragging then
-    local idealScroll = -(selected - 1) * cardHeight + (vh - 200 - maxVisibleHeight) / 2
+    local idealScroll = -(selected - 1) * cardStride + (layout.list.itemHeight * 1.5)
     targetScroll = math.max(minScroll, math.min(maxScroll, idealScroll))
   end
   
@@ -178,6 +199,7 @@ function BossGallery.update(dt)
     
     -- Handle Splitter boss auto-split in gallery
     if demoBoss == "splitter" then
+      local BossBase = require("src.game.boss.base")
       local data = BossBase.getData()
       if data and data.gallerySplitTimer then
         data.gallerySplitTimer = data.gallerySplitTimer - dt
@@ -229,10 +251,11 @@ function BossGallery.keypressed(key)
 end
 
 function BossGallery.pointerPressed(vw, vh, lx, ly)
+  local layout = getLayout(vw, vh)
+
   -- Check back button
-  local backBtn = {x = vw - 120, y = 20, w = 100, h = 40}
-  if lx >= backBtn.x and lx <= backBtn.x + backBtn.w and
-     ly >= backBtn.y and ly <= backBtn.y + backBtn.h then
+  if lx >= layout.back.x and lx <= layout.back.x + layout.back.w and
+     ly >= layout.back.y and ly <= layout.back.y + layout.back.h then
     if demoBoss then
       require("src.game.boss." .. demoBoss).cleanup()
       demoBoss = nil
@@ -242,11 +265,7 @@ function BossGallery.pointerPressed(vw, vh, lx, ly)
   end
   
   -- Initialize touch tracking first for the list area
-  local listAreaX = 20
-  local listAreaWidth = 300
-  local listAreaStartY = 80
-  
-  if lx >= listAreaX and lx <= listAreaX + listAreaWidth and ly >= listAreaStartY then
+  if lx >= layout.list.x and lx <= layout.list.x + layout.list.w and ly >= layout.list.startY then
     touchStartY = ly
     touchStartTime = love.timer.getTime()
     isDragging = false  -- Don't start dragging immediately
@@ -276,11 +295,12 @@ function BossGallery.pointerMoved(vw, vh, lx, ly)
       scroll = scroll + deltaY
       
       -- Apply boundaries
-      local cardHeight = 120
+      local layout = getLayout(vw, vh)
+      local cardStride = layout.list.itemHeight + layout.list.spacing
       local visibleCards = 5
-      local listHeight = #bossInfo * cardHeight
+      local listHeight = #bossInfo * cardStride
       local maxScroll = 0
-      local minScroll = -math.max(0, listHeight - visibleCards * cardHeight)
+      local minScroll = -math.max(0, listHeight - visibleCards * cardStride)
       scroll = math.max(minScroll, math.min(maxScroll, scroll))
       
       touchStartY = ly
@@ -294,16 +314,18 @@ end
 function BossGallery.pointerReleased(vw, vh, lx, ly)
   if touchStartY then
     local touchDuration = love.timer.getTime() - (touchStartTime or 0)
+    local layout = getLayout(vw, vh)
+    local cardStride = layout.list.itemHeight + layout.list.spacing
     
     if not isDragging and touchDuration < 0.3 and touchDuration > 0.05 then
       -- This was a tap - check what was tapped
-      local cardX = 20
-      local cardWidth = 300
-      local cardHeight = 110  -- Match drawing height
-      local cardStartY = 80 + scroll  -- Start below back button
+      local cardX = layout.list.x
+      local cardWidth = layout.list.w
+      local cardHeight = layout.list.itemHeight
+      local cardStartY = layout.list.startY + scroll
       
       for i, info in ipairs(bossInfo) do
-        local cardY = cardStartY + (i - 1) * 120  -- Match drawing spacing
+        local cardY = cardStartY + (i - 1) * cardStride
         local card = {x = cardX, y = cardY, w = cardWidth, h = cardHeight}
         if lx >= card.x and lx <= card.x + card.w and
            ly >= card.y and ly <= card.y + card.h then
@@ -316,19 +338,18 @@ function BossGallery.pointerReleased(vw, vh, lx, ly)
     else
       -- This was a drag - apply momentum based on scroll velocity
       if touchDuration < 0.3 and math.abs(scrollVelocity) > 50 then
-        -- Quick swipe - apply momentum
-        targetScroll = scroll + scrollVelocity * 0.5
+         -- Quick swipe - apply momentum
+         targetScroll = scroll + scrollVelocity * 0.5
       else
-        -- Slow drag - snap to position
-        targetScroll = scroll
+         -- Slow drag - snap to position
+         targetScroll = scroll
       end
       
       -- Apply boundaries to target
-      local cardHeight = 120
       local visibleCards = 5
-      local listHeight = #bossInfo * cardHeight
+      local listHeight = #bossInfo * cardStride
       local maxScroll = 0
-      local minScroll = -math.max(0, listHeight - visibleCards * cardHeight)
+      local minScroll = -math.max(0, listHeight - visibleCards * cardStride)
       targetScroll = math.max(minScroll, math.min(maxScroll, targetScroll))
     end
   end
@@ -343,11 +364,17 @@ end
 
 
 function BossGallery.draw(vw, vh)
+  local layout = getLayout(vw, vh)
+
   -- Background
-  love.graphics.setColor(0.04, 0.04, 0.06, 1.0)
+  love.graphics.setColor(0.02, 0.02, 0.05, 1.0)
   love.graphics.rectangle('fill', 0, 0, vw, vh)
   
-  -- Draw demo boss and bullets
+  -- Preview Area Frame (Subtle)
+  -- love.graphics.setColor(0.1, 0.1, 0.2, 0.3)
+  -- love.graphics.rectangle('line', layout.preview.x, layout.preview.y, layout.preview.w, layout.preview.h, 12, 12)
+  
+  -- Draw demo boss and bullets (Before UI so they are behind/integrated)
   if demoBoss then
     -- Draw boss at full opacity
     love.graphics.setColor(1, 1, 1, 1.0)
@@ -369,82 +396,84 @@ function BossGallery.draw(vw, vh)
   end
   
   -- Title
-  love.graphics.setColor(0.153, 0.953, 1.0, 1.0)
-  love.graphics.setFont(Fonts.get(36))
-  local title = "BOSS GALLERY"
-  local tw = love.graphics.getFont():getWidth(title)
-  love.graphics.print(title, (vw - tw) / 2, 30)
+  Neon.drawGlowText("BOSS GALLERY", 0, vh * 0.04, Fonts.get(48), Neon.COLORS.white, Neon.COLORS.cyan, 1.0, 'center', vw)
   
   -- Back button
-  love.graphics.setColor(1, 1, 1, 1)
-  love.graphics.rectangle('line', vw - 120, 20, 100, 40, 8, 8)
-  love.graphics.setFont(Fonts.get(18))
-  love.graphics.printf("Back", vw - 120, 35, 100, 'center')
+  Neon.drawButton("Back", layout.back, false, Neon.COLORS.cyan)
   
-  -- Boss cards - draw on left side with transparency
-  local cardX = 20
-  local cardWidth = 300
-  local cardHeight = 110  -- Increased for better text spacing
-  local cardStartY = 80  -- Start below back button
+  -- Boss cards - draw on left side
+  -- Clip list to screen height within reasonable bounds
+   --love.graphics.setScissor(layout.list.x, layout.list.startY - 20, layout.list.w, vh - layout.list.startY + 20)
+  
+  -- Actually, with back button moved, we don't need aggressive top clipping, just screen boundaries
+  -- But let's keep it tidy
+  love.graphics.setScissor(0, 0, vw, vh)
+  
   for i, info in ipairs(bossInfo) do
-    local cardY = cardStartY + (i - 1) * 120 + scroll  -- Increased spacing to 120px
+    local cardY = layout.list.startY + (i - 1) * (layout.list.itemHeight + layout.list.spacing) + scroll
     
-    -- Only draw if card is visible on screen
-    if cardY >= -100 and cardY <= vh + 100 then
-      local card = {x = cardX, y = cardY, w = cardWidth, h = cardHeight}
+    -- Only draw if card is within reasonable bounds (optimization)
+    if cardY >= -200 and cardY <= vh + 200 then
+      local card = {x = layout.list.x, y = cardY, w = layout.list.w, h = layout.list.itemHeight}
+      local isSelected = (i == selected)
+      local color = info.color or Neon.COLORS.cyan
       
-      -- Semi-transparent background for cards
-      if i == selected then
-        love.graphics.setColor(0.153, 0.953, 1.0, 0.3)
-        love.graphics.rectangle('fill', card.x, card.y, card.w, card.h, 12, 12)
+      -- Card background (Glassy)
+      love.graphics.setColor(0.05, 0.05, 0.1, 0.85)
+      love.graphics.rectangle("fill", card.x, card.y, card.w, card.h, 12, 12)
+      
+      -- Border (Pulse if selected)
+      if isSelected then
+          local timer = love.timer.getTime()
+          local pulse = (math.sin(timer * 5) + 1) * 0.5 * 0.5 + 0.5 
+          love.graphics.setColor(color[1], color[2], color[3], pulse)
+          love.graphics.setLineWidth(3)
+          love.graphics.rectangle("line", card.x, card.y, card.w, card.h, 12, 12)
+          
+          -- Inner Glow
+          love.graphics.setColor(color[1], color[2], color[3], 0.1)
+          love.graphics.rectangle("fill", card.x, card.y, card.w, card.h, 12, 12)
       else
-        love.graphics.setColor(0, 0, 0, 0.5)
-        love.graphics.rectangle('fill', card.x, card.y, card.w, card.h, 12, 12)
+          love.graphics.setColor(0.3, 0.3, 0.4, 0.5)
+          love.graphics.setLineWidth(1)
+          love.graphics.rectangle("line", card.x, card.y, card.w, card.h, 12, 12)
       end
+      love.graphics.setLineWidth(1)
       
-      love.graphics.setColor(1, 1, 1, 0.8)
-      love.graphics.rectangle('line', card.x, card.y, card.w, card.h, 12, 12)
-      
-      -- Boss icon (colored square)
-      love.graphics.setColor(info.color)
-      love.graphics.rectangle('fill', card.x + 10, card.y + 10, 25, 25, 6, 6)
+      -- Boss icon (colored square -> circle/glow)
+      love.graphics.setColor(color[1], color[2], color[3], 1.0)
+      love.graphics.circle("fill", card.x + 25, card.y + 25, 12)
       
       -- Boss name
+      -- Neon.drawGlowText(info.name, card.x + 50, card.y + 12, Fonts.get(18), Neon.COLORS.white, color, 1.0, 'left', 200)
       love.graphics.setColor(1, 1, 1, 1)
-      love.graphics.setFont(Fonts.get(18))  -- Slightly larger for clarity
-      love.graphics.print(info.name, card.x + 45, card.y + 12)
-      
+      love.graphics.setFont(Fonts.get(18))
+      love.graphics.print(info.name, card.x + 50, card.y + 15)
+
       -- Waves
-      love.graphics.setFont(Fonts.get(14))  -- Larger waves font
-      love.graphics.setColor(0.153, 0.953, 1.0, 1.0)
-      love.graphics.print(info.waves, card.x + 45, card.y + 35)
+      love.graphics.setFont(Fonts.get(12))
+      love.graphics.setColor(0.7, 0.7, 0.7, 1.0)
+      love.graphics.print(info.waves, card.x + 50, card.y + 35)
       
       -- Description (shortened)
-      love.graphics.setColor(1, 1, 1, 0.8)  -- Higher alpha for better readability
-      love.graphics.setFont(Fonts.get(12))  -- Larger description font
-      love.graphics.printf(info.description, card.x + 10, card.y + 60, card.w - 20, 'left')  -- More space above
+      love.graphics.setColor(0.8, 0.8, 0.9, 0.9)
+      love.graphics.setFont(Fonts.get(12))
+      love.graphics.printf(info.description, card.x + 10, card.y + 55, card.w - 20, 'left')
     end
   end
   
+  -- Reset scissor
+  love.graphics.setScissor()
+  
   -- Navigation hint
   love.graphics.setFont(Fonts.get(14))
-  love.graphics.setColor(1, 1, 1, 0.8)
-  local font = Fonts.get(14)
+  love.graphics.setColor(0.5, 0.8, 1.0, 0.8)
   local y = vh - 25
-  local useText = ""
-  local restText = " Browse bosses • ESC Return • Watch attack patterns"
-  local useWidth = font:getWidth(useText)
-  local restWidth = font:getWidth(restText)
-  local arrowWidth = 20
-  local totalWidth = useWidth + arrowWidth + restWidth
-  local startX = (vw - totalWidth) / 2
-  love.graphics.print(useText, startX, y)
-  local arrowX = startX + useWidth
-  -- Up arrow
-  love.graphics.polygon("line", arrowX + 5, y + 8, arrowX + 10, y + 3, arrowX + 15, y + 8)
-  -- Down arrow
-  love.graphics.polygon("line", arrowX + 5, y + 13, arrowX + 10, y + 18, arrowX + 15, y + 13)
-  love.graphics.print(restText, arrowX + arrowWidth, y)
+  if InputMode.isTouchMode() then
+     love.graphics.printf("Tap to select • Swipe list to scroll", 0, y, vw, "center")
+  else
+     love.graphics.printf("Arrows/WASD to browse • ESC Return", 0, y, vw, "center")
+  end
 end
 
 return BossGallery

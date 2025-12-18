@@ -5,8 +5,24 @@ local Input = require("src.core.input")
 local State = require("src.core.state")
 local Fonts = require("src.ui.fonts")
 local InputMode = require("src.core.inputmode")
+local Neon = require("src.ui.neon_ui")
 
 local VIRTUAL_WIDTH, VIRTUAL_HEIGHT = Constants.VIRTUAL_WIDTH, Constants.VIRTUAL_HEIGHT
+
+local function getLayout(vw, vh)
+  vw = vw or VIRTUAL_WIDTH
+  vh = vh or VIRTUAL_HEIGHT
+  return {
+    back = { x = 20, y = 20, w = 120, h = 40 },
+    list = {
+      startY = vh * 0.22,
+      itemHeight = 90,
+      spacing = 10,
+      itemWidth = 600,
+      itemX = (vw - 600) / 2
+    }
+  }
+end
 
 -- Menu state
 local state = {
@@ -94,46 +110,43 @@ function UpgradeMenu.update(dt)
     end
   end
   
-  -- Handle mouse hover for back button
+  -- Handle input
   local Scaling = require("src.systems.scaling")
   local mouseX, mouseY = love.mouse.getPosition()
   local scale, offsetX, offsetY = Scaling.getScale()
   local scaledX = (mouseX - offsetX) / scale
   local scaledY = (mouseY - offsetY) / scale
   
-  local backButtonX = 20
-  local backButtonY = 20
-  local backButtonW = 100
-  local backButtonH = 40
+  local layout = getLayout(VIRTUAL_WIDTH, VIRTUAL_HEIGHT)
   
-  state.backButtonHovered = (scaledX >= backButtonX and scaledX <= backButtonX + backButtonW and
-                            scaledY >= backButtonY and scaledY <= backButtonY + backButtonH)
-  
-  -- Handle mouse click for upgrades
+  -- Back button hover
+  state.backButtonHovered = (scaledX >= layout.back.x and scaledX <= layout.back.x + layout.back.w and
+                             scaledY >= layout.back.y and scaledY <= layout.back.y + layout.back.h)
+                             
+  -- Mouse clicks
   if love.mouse.isDown(1) then
-    local upgradeStartY = 110
-    local upgradeHeight = 100
-    local upgradeSpacing = 5
-    
-    for i, upgradeType in ipairs(state.upgradeList) do
-      local upgradeY = upgradeStartY + (i - 1) * (upgradeHeight + upgradeSpacing)
-      
-      if scaledX >= (VIRTUAL_WIDTH - 600)/2 and scaledX <= (VIRTUAL_WIDTH - 600)/2 + 600 and
-         scaledY >= upgradeY and scaledY <= upgradeY + upgradeHeight then
-        state.selectedUpgrade = i
-        if not state.lastClickTime or (love.timer.getTime() - state.lastClickTime) > 0.5 then
-          local success, message = Economy.purchaseUpgrade(upgradeType)
-          showMessage(message)
-          state.lastClickTime = love.timer.getTime()
+     -- Back button
+     if state.backButtonHovered then
+         require('src.audio.audio').play('ui_click')
+         State.set("title")
+         return
+     end
+     
+     -- Upgrades
+     for i, upgradeType in ipairs(state.upgradeList) do
+        local upgradeY = layout.list.startY + (i - 1) * (layout.list.itemHeight + layout.list.spacing)
+        if scaledX >= layout.list.itemX and scaledX <= layout.list.itemX + layout.list.itemWidth and
+           scaledY >= upgradeY and scaledY <= upgradeY + layout.list.itemHeight then
+           
+           state.selectedUpgrade = i
+           if not state.lastClickTime or (love.timer.getTime() - state.lastClickTime) > 0.5 then
+              local success, msg = Economy.purchaseUpgrade(upgradeType)
+              showMessage(msg)
+              state.lastClickTime = love.timer.getTime()
+           end
+           break
         end
-        break
-      end
-    end
-  end
-  
-  -- Handle mouse click for back button
-  if love.mouse.isDown(1) and state.backButtonHovered then
-    State.pop()
+     end
   end
 end
 
@@ -144,28 +157,21 @@ function UpgradeMenu.pointerPressed(vw, vh, lx, ly)
   end
   
   -- Handle back button
-  local backButtonX = 20
-  local backButtonY = 20
-  local backButtonW = 100
-  local backButtonH = 40
+  local layout = getLayout(vw, vh)
   
-  if lx >= backButtonX and lx <= backButtonX + backButtonW and
-     ly >= backButtonY and ly <= backButtonY + backButtonH then
+  if lx >= layout.back.x and lx <= layout.back.x + layout.back.w and
+     ly >= layout.back.y and ly <= layout.back.y + layout.back.h then
     require('src.audio.audio').play('ui_click')
     State.set("title")
     return nil
   end
   
   -- Handle upgrade cards
-  local upgradeStartY = 110
-  local upgradeHeight = 100
-  local upgradeSpacing = 5
-  
   for i, upgradeType in ipairs(state.upgradeList) do
-    local upgradeY = upgradeStartY + (i - 1) * (upgradeHeight + upgradeSpacing)
+    local upgradeY = layout.list.startY + (i - 1) * (layout.list.itemHeight + layout.list.spacing)
     
-    if lx >= (VIRTUAL_WIDTH - 600)/2 and lx <= (VIRTUAL_WIDTH - 600)/2 + 600 and
-       ly >= upgradeY and ly <= upgradeY + upgradeHeight then
+    if lx >= layout.list.itemX and lx <= layout.list.itemX + layout.list.itemWidth and
+       ly >= upgradeY and ly <= upgradeY + layout.list.itemHeight then
       state.selectedUpgrade = i
       local success, message = Economy.purchaseUpgrade(upgradeType)
       showMessage(message)
@@ -178,197 +184,143 @@ end
 
 -- Draw upgrade menu
 function UpgradeMenu.draw()
-  -- Neon-themed background with gradient effect
+  local vw, vh = VIRTUAL_WIDTH, VIRTUAL_HEIGHT
+  local layout = getLayout(vw, vh)
+  
+  -- Background
   love.graphics.setColor(0.02, 0.02, 0.05, 1.0)
-  love.graphics.rectangle("fill", 0, 0, VIRTUAL_WIDTH, VIRTUAL_HEIGHT)
+  love.graphics.rectangle("fill", 0, 0, vw, vh)
   
-  -- Subtle grid pattern for background
+  -- Grid
   love.graphics.setColor(0.1, 0.1, 0.2, 0.3)
-  for x = 0, VIRTUAL_WIDTH, 50 do
-    love.graphics.line(x, 0, x, VIRTUAL_HEIGHT)
+  for x = 0, vw, 50 do
+    love.graphics.line(x, 0, x, vh)
   end
-  for y = 0, VIRTUAL_HEIGHT, 50 do
-    love.graphics.line(0, y, VIRTUAL_WIDTH, y)
+  for y = 0, vh, 50 do
+    love.graphics.line(0, y, vw, y)
   end
   
-  -- Title with neon glow
-  love.graphics.setColor(0.153, 0.953, 1.0, 1.0)
-  Fonts.set(40)
-  local title = "UPGRADES"
-  local tw = love.graphics.getFont():getWidth(title)
-  love.graphics.print(title, (VIRTUAL_WIDTH - tw) / 2, 30)
+  -- Title
+  Neon.drawGlowText("UPGRADES", 0, vh * 0.04, Fonts.get(48), Neon.COLORS.white, Neon.COLORS.cyan, 1.0, 'center', vw)
   
-  -- Glow effect for title
-  love.graphics.setColor(0.153, 0.953, 1.0, 0.3)
-  Fonts.set(40)
-  love.graphics.print(title, (VIRTUAL_WIDTH - tw) / 2 + 2, 32)
-  
-  -- Credits display with neon styling
+  -- Credits
   local credits = Economy.getCredits()
-  love.graphics.setColor(0.5, 1.0, 0.5, 1.0)
-  Fonts.set(20)
-  love.graphics.printf("CREDITS: " .. credits, 0, 80, VIRTUAL_WIDTH, "center")
+  Neon.drawGlowText("Credits: " .. credits, 0, vh * 0.13, Fonts.get(24), {1, 0.9, 0.4}, {1, 0.6, 0}, 1.0, 'center', vw)
   
-  -- Upgrade list with enhanced styling
-  local upgradeStartY = 110
-  local upgradeHeight = 100
-  local upgradeSpacing = 5
+  -- Upgrade List
   local upgradeInfo = Economy.getUpgradeInfo()
   local upgradeColors = {
-    speed = {0.0, 1.0, 1.0},      -- Cyan
-    damage = {1.0, 0.2, 0.2},     -- Red
-    fireRate = {1.0, 1.0, 0.0},   -- Yellow
-    piercing = {0.5, 0.0, 1.0},   -- Purple
-    multiShot = {1.0, 0.5, 0.0}   -- Orange
+    speed = Neon.COLORS.cyan,
+    damage = Neon.COLORS.red,
+    fireRate = {1.0, 1.0, 0.0},
+    piercing = {0.7, 0.2, 1.0},
+    multiShot = {1.0, 0.6, 0.0}
   }
   
   for i, upgradeType in ipairs(state.upgradeList) do
-    local upgradeY = upgradeStartY + (i - 1) * (upgradeHeight + upgradeSpacing)
+    local upgradeY = layout.list.startY + (i - 1) * (layout.list.itemHeight + layout.list.spacing)
     local isSelected = (i == state.selectedUpgrade)
     local info = upgradeInfo[upgradeType]
-    local color = upgradeColors[upgradeType] or {1, 1, 1}
+    local color = upgradeColors[upgradeType] or Neon.COLORS.white
+    local cardX = layout.list.itemX
+    local cardW = layout.list.itemWidth
+    local cardH = layout.list.itemHeight
     
-    -- Card background with neon border
-    local cardX = (VIRTUAL_WIDTH - 600) / 2  -- Center 600px wide cards
-    local cardW = 600
+    -- Card background (Glassy)
+    love.graphics.setColor(0.05, 0.05, 0.1, 0.85)
+    love.graphics.rectangle("fill", cardX, upgradeY, cardW, cardH, 12, 12)
     
+    -- Border (Pulse if selected)
     if isSelected then
-      -- Selected: brighter neon background
-      love.graphics.setColor(color[1], color[2], color[3], 0.2)
-      love.graphics.rectangle("fill", cardX, upgradeY, cardW, upgradeHeight, 15, 15)
-      love.graphics.setColor(1, 1, 1, 0.1)
-      love.graphics.rectangle("fill", cardX + 5, upgradeY + 5, cardW - 10, upgradeHeight - 10, 12, 12)
+        local timer = love.timer.getTime()
+        local pulse = (math.sin(timer * 5) + 1) * 0.5 * 0.5 + 0.5 
+        love.graphics.setColor(color[1], color[2], color[3], pulse)
+        love.graphics.setLineWidth(3)
+        love.graphics.rectangle("line", cardX, upgradeY, cardW, cardH, 12, 12)
+        
+        -- Inner Glow
+        love.graphics.setColor(color[1], color[2], color[3], 0.1)
+        love.graphics.rectangle("fill", cardX, upgradeY, cardW, cardH, 12, 12)
     else
-      -- Unselected: dark with subtle glow
-      love.graphics.setColor(0.05, 0.05, 0.1, 0.8)
-      love.graphics.rectangle("fill", cardX, upgradeY, cardW, upgradeHeight, 15, 15)
+        love.graphics.setColor(0.3, 0.3, 0.4, 0.5)
+        love.graphics.setLineWidth(1)
+        love.graphics.rectangle("line", cardX, upgradeY, cardW, cardH, 12, 12)
     end
-    
-    -- Outer neon border
-    love.graphics.setColor(color[1], color[2], color[3], 1.0)
-    love.graphics.setLineWidth(3)
-    love.graphics.rectangle("line", cardX, upgradeY, cardW, upgradeHeight, 15, 15)
     love.graphics.setLineWidth(1)
-    
-    -- Inner highlight for selected
-    if isSelected then
-      love.graphics.setColor(1, 1, 1, 0.3)
-      love.graphics.rectangle("line", cardX + 3, upgradeY + 3, cardW - 6, upgradeHeight - 6, 12, 12)
-    end
-    
-    -- Upgrade icon (simple colored circle)
+
+    -- Icon Circle
     love.graphics.setColor(color[1], color[2], color[3], 1.0)
-    love.graphics.circle("fill", cardX + 30, upgradeY + upgradeHeight/2, 20, 20)
+    love.graphics.circle("fill", cardX + 40, upgradeY + cardH/2, 25)
     
-    -- Upgrade name with color accent
-    love.graphics.setColor(1, 1, 1, 1)
-    Fonts.set(24)
-    love.graphics.print(info.name, cardX + 70, upgradeY + 15)
+    -- Text Info
+    local contentX = cardX + 80
     
-    -- Level progress bar
-    local levelRatio = info.currentLevel / info.maxLevel
-    local barX = cardX + 70
-    local barY = upgradeY + 45
-    local barW = 200
+    -- Name
+    Neon.drawGlowText(info.name, contentX, upgradeY + 12, Fonts.get(24), Neon.COLORS.white, color, 1.0, 'left', 300)
+    
+    -- Level Bar
+    local barX = contentX
+    local barY = upgradeY + 55
+    local barW = 220
     local barH = 8
+    local levelRatio = info.currentLevel / info.maxLevel
     
-    -- Background bar
-    love.graphics.setColor(0.2, 0.2, 0.2, 1.0)
-    love.graphics.rectangle("fill", barX, barY, barW, barH, 4, 4)
+    love.graphics.setColor(0.2, 0.2, 0.2, 1)
+    love.graphics.rectangle("fill", barX, barY, barW, barH, 4)
+    love.graphics.setColor(color[1], color[2], color[3], 1)
+    love.graphics.rectangle("fill", barX, barY, barW * levelRatio, barH, 4)
     
-    -- Progress fill
-    love.graphics.setColor(color[1], color[2], color[3], 1.0)
-    love.graphics.rectangle("fill", barX + 2, barY + 2, barW * levelRatio - 4, barH - 4, 2, 2)
+    love.graphics.setColor(0.8, 0.8, 0.8, 1)
+    love.graphics.setFont(Fonts.get(14))
+    love.graphics.print("Lvl " .. info.currentLevel .. "/".. info.maxLevel, barX + barW + 10, barY - 4)
     
-    -- Level text
-    love.graphics.setColor(1, 1, 1, 1)
-    Fonts.set(14)
-    love.graphics.printf("Level " .. info.currentLevel .. "/" .. info.maxLevel, barX + barW + 10, barY, 100, "left")
+    -- Description (Bottom)
+    -- love.graphics.setColor(0.7, 0.7, 0.8, 1)
+    -- love.graphics.setFont(Fonts.get(14))
+    -- love.graphics.print(info.description, contentX, upgradeY + 70) 
+    -- Description might be too cramped with smaller height. Let's put it top right? 
+    -- Or just under name. With 90 height: 12 (name) + 24 (size) + 20 gap = 56. 
+    -- Actually description is important.
+    -- Let's put description small under name:
+    love.graphics.setColor(0.8, 0.8, 0.9, 0.8)
+    love.graphics.setFont(Fonts.get(12))
+    love.graphics.print(info.description, contentX, upgradeY + 38)
     
-    -- Description
-    love.graphics.setColor(0.9, 0.9, 0.9, 1)
-    Fonts.set(14)
-    love.graphics.printf(info.description, cardX + 70, upgradeY + 65, cardW - 100, "left")
+    -- Cost / Status (Right Side)
+    local costX = cardX + cardW - 100
+    local costY = upgradeY + cardH/2
     
-    -- Cost section
-    local costX = cardX + cardW - 150
-    local costY = upgradeY + 15
     if info.currentLevel >= info.maxLevel then
-      love.graphics.setColor(0.5, 1.0, 0.5, 1)
-      Fonts.set(18)
-      love.graphics.printf("MAXED", costX, costY, 120, "center")
+         Neon.drawGlowText("MAXED", costX - 20, costY - 10, Fonts.get(20), Neon.COLORS.cyan, Neon.COLORS.cyan, 1.0, 'center', 120)
     else
-      local missingCredits = math.max(0, (info.cost or 0) - credits)
-      if info.canPurchase then
-        love.graphics.setColor(1.0, 1.0, 0.5, 1)
-      else
-        love.graphics.setColor(1.0, 0.5, 0.5, 1)
-      end
-      Fonts.set(14)
-      love.graphics.printf("Cost", costX, costY, 120, "center")
-      Fonts.set(18)
-      love.graphics.printf(info.cost, costX, costY + 20, 120, "center")
-      if not info.canPurchase then
-        love.graphics.setColor(1.0, 0.7, 0.7, 1)
-Fonts.set(12)
-        love.graphics.printf("Need +" .. missingCredits, costX, costY + 40, 120, "center")
-      end
+         local canAfford = credits >= info.cost
+         local costColor = canAfford and {1, 1, 0.5} or {1, 0.5, 0.5}
+         
+         love.graphics.setFont(Fonts.get(12))
+         love.graphics.setColor(0.7, 0.7, 0.7)
+         love.graphics.printf("Cost", costX - 60, costY - 20, 120, "center")
+         
+         Neon.drawGlowText(tostring(info.cost), costX - 60, costY, Fonts.get(20), costColor, canAfford and {1, 1, 0} or {1, 0, 0}, 1.0, 'center', 120)
     end
   end
+
+  -- Back Button
+  Neon.drawButton("Back", layout.back, state.backButtonHovered, Neon.COLORS.cyan)
   
-  -- Back button with neon styling (top left)
-  local backButtonX = 20
-  local backButtonY = 20
-  local backButtonW = 100
-  local backButtonH = 40
-  
-  if state.backButtonHovered then
-    love.graphics.setColor(0.153, 0.953, 1.0, 0.8)
+  -- Instructions
+  love.graphics.setFont(Fonts.get(14))
+  love.graphics.setColor(0.5, 0.5, 0.6, 1)
+  if InputMode.isTouchMode() then
+      love.graphics.printf("Tap to purchase", 0, vh - 30, vw, "center")
   else
-    love.graphics.setColor(0.1, 0.1, 0.2, 0.7)
+      love.graphics.printf("Select with Arrows • ENTER to purchase • ESC to back", 0, vh - 30, vw, "center")
   end
-  love.graphics.rectangle("fill", backButtonX, backButtonY, backButtonW, backButtonH, 8, 8)
   
-  love.graphics.setColor(0.153, 0.953, 1.0, 1.0)
-  love.graphics.setLineWidth(2)
-  love.graphics.rectangle("line", backButtonX, backButtonY, backButtonW, backButtonH, 8, 8)
-  love.graphics.setLineWidth(1)
-  
-  love.graphics.setColor(1, 1, 1, 1)
-  Fonts.set(16)
-  love.graphics.printf("BACK", backButtonX, backButtonY + 10, backButtonW, "center")
-  
-  -- Instructions with better styling
-  love.graphics.setFont(Fonts.get(12))
-  love.graphics.setColor(0.5, 0.8, 1.0, 0.8)
-  local font = Fonts.get(12)
-  local y = VIRTUAL_HEIGHT - 30
-  local useText = ""
-  local restText = " Select • ENTER/SPACE Purchase • ESC Back"
-  local useWidth = font:getWidth(useText)
-  local restWidth = font:getWidth(restText)
-  local arrowWidth = 20
-  local totalWidth = useWidth + arrowWidth + restWidth
-  local startX = (VIRTUAL_WIDTH - totalWidth) / 2
-  love.graphics.print(useText, startX, y)
-  local arrowX = startX + useWidth
-  -- Up arrow
-  love.graphics.polygon("line", arrowX + 5, y + 8, arrowX + 10, y + 3, arrowX + 15, y + 8)
-  -- Down arrow
-  love.graphics.polygon("line", arrowX + 5, y + 13, arrowX + 10, y + 18, arrowX + 15, y + 13)
-  love.graphics.print(restText, arrowX + arrowWidth, y)
-  
-  -- Message display with neon styling
+  -- Message
   if state.messageTimer > 0 then
-    local alpha = math.min(1.0, state.messageTimer / 0.5) * 0.9
-    love.graphics.setColor(1.0, 0.8, 0.2, alpha)
-    Fonts.set(20)
-    love.graphics.printf(state.message, 0, VIRTUAL_HEIGHT / 2 - 20, VIRTUAL_WIDTH, "center")
-    
-    -- Glow effect
-    love.graphics.setColor(1.0, 0.8, 0.2, alpha * 0.3)
-    Fonts.set(20)
-    love.graphics.printf(state.message, 0, VIRTUAL_HEIGHT / 2 - 20 + 2, VIRTUAL_WIDTH, "center")
+    local alpha = math.min(1.0, state.messageTimer)
+    love.graphics.setColor(1.0, 1.0, 1.0, alpha)
+    Neon.drawGlowText(state.message, 0, vh/2, Fonts.get(30), Neon.COLORS.white, Neon.COLORS.magenta, 1.0, 'center', vw)
   end
 end
 
