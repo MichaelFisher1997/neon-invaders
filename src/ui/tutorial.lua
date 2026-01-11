@@ -75,8 +75,13 @@ function Tutorial.draw(vw, vh)
     return
   end
   
+  -- Safety checks
+  if not vw or not vh or vw <= 0 or vh <= 0 then
+    return
+  end
+  
   local currentStep = TUTORIAL_STEPS[state.step]
-  if not currentStep then
+  if not currentStep or not currentStep.title or not currentStep.text then
     return
   end
   
@@ -84,37 +89,54 @@ function Tutorial.draw(vw, vh)
   love.graphics.setColor(0, 0, 0, 0.8)
   love.graphics.rectangle("fill", 0, 0, vw, vh)
   
-  -- Draw tutorial box
-  local boxWidth = 400
-  local boxHeight = 150
+  -- Draw tutorial box (responsive sizing for mobile)
+  local InputMode = require("src.core.inputmode")
+  local isMobile = InputMode.isTouch()
+  
+  -- For mobile, use smaller dimensions and ensure proper centering
+  local boxWidth = isMobile and math.min(350, vw * 0.7) or math.min(400, vw * 0.8)
+  local boxHeight = isMobile and math.min(120, vh * 0.25) or math.min(150, vh * 0.3)
   local boxX = (vw - boxWidth) / 2
   local boxY = (vh - boxHeight) / 2
   
-  love.graphics.setColor(Constants.COLORS.cyan[1], Constants.COLORS.cyan[2], Constants.COLORS.cyan[3], 0.2)
+ -- Safe color access
+  local cyanColor = (Constants.COLORS and Constants.COLORS.cyan) or {0.153, 0.953, 1.0, 1.0}
+  love.graphics.setColor(cyanColor[1], cyanColor[2], cyanColor[3], 0.2)
   love.graphics.rectangle("fill", boxX - 4, boxY - 4, boxWidth + 8, boxHeight + 8)
   
   love.graphics.setColor(0.1, 0.1, 0.15, 0.95)
-  love.graphics.rectangle("fill", boxX, boxY, boxWidth, boxHeight)
+  love.graphics.rectangle("fill", boxX, boxY, boxHeight)
   
-  love.graphics.setColor(Constants.COLORS.cyan)
+  love.graphics.setColor(cyanColor)
   love.graphics.rectangle("line", boxX, boxY, boxWidth, boxHeight)
   
-  -- Draw text
-  love.graphics.setColor(Constants.COLORS.white)
-  love.graphics.printf(currentStep.title, boxX + 20, boxY + 20, boxWidth - 40, "center")
+  -- Draw text (responsive font sizes and padding)
+  local Fonts = require("src.ui.fonts")
+  local titleFont = isMobile and (Fonts.get(24) or love.graphics.newFont(24)) or (Fonts.get(28) or love.graphics.newFont(28))
+  local textFont = isMobile and (Fonts.get(14) or love.graphics.newFont(14)) or (Fonts.get(16) or love.graphics.newFont(16))
+  local padding = isMobile and 15 or 20
+  
+  -- Safe color access
+  local whiteColor = (Constants.COLORS and Constants.COLORS.white) or {1, 1, 1, 1}
+  love.graphics.setColor(whiteColor)
+  love.graphics.setFont(titleFont)
+  love.graphics.printf(currentStep.title, boxX + padding, boxY + padding, boxWidth - padding * 2, "center")
   
   love.graphics.setColor(0.8, 0.8, 0.8)
-  love.graphics.printf(currentStep.text, boxX + 20, boxY + 60, boxWidth - 40, "center")
+  love.graphics.setFont(textFont)
+  love.graphics.printf(currentStep.text, boxX + padding, boxY + padding + (isMobile and 35 or 40), boxWidth - padding * 2, "center")
   
-  -- Draw progress indicator
-  local progressWidth = (boxWidth - 40) * (state.timer / currentStep.duration)
-  love.graphics.setColor(Constants.COLORS.magenta)
-  love.graphics.rectangle("fill", boxX + 20, boxY + boxHeight - 10, progressWidth, 4)
+  -- Draw progress indicator (responsive)
+  local progressWidth = (boxWidth - padding * 2) * (state.timer / currentStep.duration)
+  local magentaColor = (Constants.COLORS and Constants.COLORS.magenta) or {1.0, 0.182, 0.651, 1.0}
+  love.graphics.setColor(magentaColor)
+  love.graphics.rectangle("fill", boxX + padding, boxY + boxHeight - (isMobile and 8 or 10), progressWidth, isMobile and 3 or 4)
   
-  -- Draw step counter
-  love.graphics.setColor(Constants.COLORS.white)
+  -- Draw step counter (responsive)
+  love.graphics.setColor(whiteColor)
+  love.graphics.setFont(isMobile and (Fonts.get(12) or love.graphics.newFont(12)) or (Fonts.get(14) or love.graphics.newFont(14)))
   love.graphics.printf(string.format("Step %d/%d", state.step, #TUTORIAL_STEPS), 
-                      boxX + 20, boxY + boxHeight - 30, boxWidth - 40, "center")
+                      boxX + padding, boxY + boxHeight - (isMobile and 25 or 30), boxWidth - padding * 2, "center")
 end
 
 --- Skip tutorial

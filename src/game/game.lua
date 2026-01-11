@@ -13,6 +13,8 @@ local Economy = require("src.systems.economy")
 local Events = require("src.game.events")
 local scaling = require("src.systems.scaling")
 local Constants = require("src.config.constants")
+local Audio = require("src.audio.audio")
+local LaserBoss = require("src.game.boss.laser")
 
 local Game = {}
 
@@ -83,8 +85,11 @@ function Game.update(dt, input)
   local playerCenterY = py + ph/2
 
   -- Collisions: bullets vs aliens (and boss)
-  Bullets.eachActive(function(bullet)
-    if bullet.from == 'player' then
+  -- Collisions: bullets vs aliens (and boss)
+  local bulletPool = Bullets.getPool()
+  for i = 1, #bulletPool do
+    local bullet = bulletPool[i]
+    if bullet.active and bullet.from == 'player' then
       local got = Aliens.checkBulletCollision(bullet)
       local hitBoss = false
       if not got and Boss.exists() then
@@ -102,7 +107,7 @@ function Game.update(dt, input)
               Screenshake.add(0.22, 18)
               -- Visual feedback for health bonus
               Particles.burst(bx + bw/2, by + bh/2, {0.2, 1.0, 0.2, 1.0}, 20, 180) -- Green health burst
-              require('src.audio.audio').play('health_bonus')
+              Audio.play('health_bonus')
               Banner.trigger("BOSS DEFEATED! +1 LIFE")
             else
               Particles.burst(bullet.x, bullet.y, {1.0, 1.0, 1.0, 1.0}, 12, 200)
@@ -119,7 +124,7 @@ function Game.update(dt, input)
         end
         Particles.burst(bullet.x, bullet.y, {1.0, 0.182, 0.651, 1.0}, 10, 220) -- magenta burst
         Screenshake.add(0.08, 4)
-        require('src.audio.audio').play('hit')
+        Audio.play('hit')
         -- Award credits for alien kill (got contains the score value)
         local credits = 10 -- Base credits
         
@@ -138,7 +143,7 @@ function Game.update(dt, input)
         end
       end
     end
-  end)
+  end
 
   -- Note: Cosmetics are unlocked via credits in the economy system, not score-based unlocks
 
@@ -163,8 +168,10 @@ function Game.update(dt, input)
   end
 
   -- Collisions: enemy bullets vs player
-  Bullets.eachActive(function(b)
-    if b.from == 'enemy' then
+  -- Collisions: enemy bullets vs player
+  for i = 1, #bulletPool do
+    local b = bulletPool[i]
+    if b.active and b.from == 'enemy' then
       if Player.isVulnerable() then
         local dx = math.max(px - b.x, 0, b.x - (px + pw))
         local dy = math.max(py - b.y, 0, b.y - (py + ph))
@@ -177,19 +184,18 @@ function Game.update(dt, input)
           Player.startRespawn()
           if Player.lives <= 0 then
             -- Convert final score to credits
-            local Economy = require("src.systems.economy")
             Economy.convertScore(score)
             isGameOver = true
           end
-          require('src.audio.audio').play('hit')
+          Audio.play('hit')
         end
       end
     end
-  end)
+  end
 
   -- Check laser boss collision
   if Boss.exists() then
-    local LaserBoss = require("src.game.boss.laser")
+    -- LaserBoss already required at top level
     local laserData = LaserBoss.getLaserData and LaserBoss.getLaserData()
     if laserData and laserData.state == "firing" and Player.isVulnerable() then
       -- Check if player line intersects with laser
@@ -237,7 +243,7 @@ function Game.update(dt, input)
         if Player.lives <= 0 then
           isGameOver = true
         end
-        require('src.audio.audio').play('hit')
+        Audio.play('hit')
       end
     end
   end
@@ -254,7 +260,7 @@ function Game.update(dt, input)
     if Player.lives <= 0 then
       isGameOver = true
     end
-    require('src.audio.audio').play('hit')
+    Audio.play('hit')
   end
 
   -- No powerup collision checking in economy system
@@ -277,10 +283,9 @@ function Game.update(dt, input)
       -- Wait for boss defeat to progress
       if not Boss.exists() then
         -- Boss defeated -> award bonus and show intermission
-        if not intermissionPending then
-          local Economy = require("src.systems.economy")
-          Economy.awardBossKill()
-          Banner.trigger("WAVE CLEARED!")
+          if not intermissionPending then
+            Economy.awardBossKill()
+            Banner.trigger("WAVE CLEARED!")
           -- No temporary upgrade overlay - using persistent economy system
           intermissionPending = true
           pendingNextCfg = Waves.configFor(wave + 1)

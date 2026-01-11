@@ -2,6 +2,8 @@ local Player = {}
 local audio = require("src.audio.audio")
 local Cosmetics = require("src.systems.cosmetics")
 local Constants = require("src.config.constants")
+local Economy = require("src.systems.economy")
+local Input = require("src.core.input")
 
 local VIRTUAL_WIDTH, VIRTUAL_HEIGHT = Constants.VIRTUAL_WIDTH, Constants.VIRTUAL_HEIGHT
 local DEFAULTS = Constants.PLAYER
@@ -47,7 +49,7 @@ function Player.update(dt, input, spawnBullet)
   end
 
   -- Move with economy speed upgrade
-  local Economy = require("src.systems.economy")
+  -- Economy already required
   local move = input.moveAxis or 0
   local speedMultiplier = Economy.getSpeedMultiplier()
   Player.x = Player.x + move * Player.speed * speedMultiplier * dt
@@ -57,7 +59,7 @@ function Player.update(dt, input, spawnBullet)
   if Player.x > maxX then Player.x = maxX end
 
   -- Fire (allow holding fire) with economy upgrades
-  local Economy = require("src.systems.economy")
+  -- Economy already required
   local fireRateMultiplier = Economy.getFireRateMultiplier()
   local multiShot = Economy.getMultiShotCount()
   local piercing = false -- No piercing upgrade in economy system
@@ -66,7 +68,7 @@ function Player.update(dt, input, spawnBullet)
   local shouldFire = (input.fireHeld or input.firePressed) and Player.cooldown <= 0
   
   -- Handle swipe shooting
-  local Input = require("src.core.input")
+  -- Input already required at top level
   local swipeDir = Input.getSwipeDirection()
   
   if (swipeDir or shouldFire) and Player.cooldown <= 0 then

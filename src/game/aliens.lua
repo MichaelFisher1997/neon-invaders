@@ -3,6 +3,17 @@ local Aliens = {}
 local VIRTUAL_WIDTH, VIRTUAL_HEIGHT = 1280, 720
 local Constants = require("src.config.constants")
 local Bullets = require("src.game.bullets")
+local Events = require("src.game.events")
+local Waves = require("src.game.waves")
+
+local function flattenPoints(points)
+  local flat = {}
+  for _, p in ipairs(points) do
+    table.insert(flat, p[1])
+    table.insert(flat, p[2])
+  end
+  return flat
+end
 
 local formation = {
   originX = 160,
@@ -32,72 +43,74 @@ local function shadeColor(color, delta)
          clampColorComponent(color[3] + delta)
 end
 
-local function drawNormalizedPolygon(points, cx, cy, halfW, halfH)
-  local vertices = {}
-  for _, point in ipairs(points) do
-    table.insert(vertices, cx + point[1] * halfW)
-    table.insert(vertices, cy + point[2] * halfH)
-  end
+local function drawPolygonTransformed(vertices, cx, cy, sx, sy)
+  love.graphics.push()
+  love.graphics.translate(cx, cy)
+  love.graphics.scale(sx, sy)
   love.graphics.polygon("fill", vertices)
+  love.graphics.pop()
 end
 
-local BASIC_HULL = {
+local BASIC_HULL = flattenPoints({
   {0.0, -1.0}, {0.6, -0.45}, {0.85, -0.05}, {0.6, 0.45},
   {0.25, 1.0}, {-0.25, 1.0}, {-0.6, 0.45}, {-0.85, -0.05}, {-0.6, -0.45}
-}
+})
 
-local BASIC_PLATE = {
+local BASIC_PLATE = flattenPoints({
   {0.0, -0.7}, {0.45, -0.2}, {0.4, 0.35}, {0.18, 0.9},
   {-0.18, 0.9}, {-0.4, 0.35}, {-0.45, -0.2}
-}
+})
 
-local TANK_BODY = {
+local TANK_BODY = flattenPoints({
   {0.0, -0.9}, {0.75, -0.45}, {0.95, 0.1}, {0.65, 1.0},
   {-0.65, 1.0}, {-0.95, 0.1}, {-0.75, -0.45}
-}
+})
 
-local TANK_PLATE = {
+local TANK_PLATE = flattenPoints({
   {0.0, -0.5}, {0.4, -0.15}, {0.38, 0.55}, {0.15, 0.85},
   {-0.15, 0.85}, {-0.38, 0.55}, {-0.4, -0.15}
-}
+})
 
-local TANK_TURRET = {
+local TANK_TURRET = flattenPoints({
   {0.0, -0.95}, {0.18, -0.65}, {0.18, -0.35}, {-0.18, -0.35}, {-0.18, -0.65}
-}
+})
 
-local SPEEDY_FUSELAGE = {
+local SPEEDY_FUSELAGE = flattenPoints({
   {0.0, -1.0}, {0.28, -0.6}, {0.45, -0.2}, {0.32, 0.3},
   {0.12, 1.0}, {-0.12, 1.0}, {-0.32, 0.3}, {-0.45, -0.2}, {-0.28, -0.6}
-}
+})
 
-local SPEEDY_WING = {
+local SPEEDY_WING = flattenPoints({
   {0.0, -0.2}, {0.75, 0.05}, {0.6, 0.35}, {0.2, 0.25}
-}
+})
+-- Mirror speedy wing manually for flat array or just draw twice with scale x -1
+-- Let's just draw twice with logic
 
-local SNIPER_CORE = {
+local SNIPER_CORE = flattenPoints({
   {0.0, -0.9}, {0.55, -0.4}, {0.6, 0.2}, {0.3, 0.95},
   {-0.3, 0.95}, {-0.6, 0.2}, {-0.55, -0.4}
-}
+})
 
-local SNIPER_SCOPE = {
+local SNIPER_SCOPE = flattenPoints({
   {0.0, -0.75}, {0.22, -0.35}, {0.18, 0.32}, {-0.18, 0.32}, {-0.22, -0.35}
-}
+})
 
-local GHOST_HULL = {
+local GHOST_HULL = flattenPoints({
   {0.0, -1.0}, {0.58, -0.6}, {0.8, -0.05}, {0.65, 0.45},
   {0.35, 1.0}, {0.0, 0.75}, {-0.35, 1.0}, {-0.65, 0.45}, {-0.8, -0.05}, {-0.58, -0.6}
-}
+})
 
 local function drawAlienBasic(alien, x, y, w, h, color, alpha)
   local cx, cy = x + w / 2, y + h / 2
   local halfW, halfH = w / 2, h / 2
 
   love.graphics.setColor(color[1], color[2], color[3], alpha)
-  drawNormalizedPolygon(BASIC_HULL, cx, cy, halfW, halfH)
+  drawPolygonTransformed(BASIC_HULL, cx, cy, halfW, halfH)
 
   local lr, lg, lb = shadeColor(color, 0.18)
   love.graphics.setColor(lr, lg, lb, alpha)
-  drawNormalizedPolygon(BASIC_PLATE, cx, cy + halfH * 0.05, halfW * 0.78, halfH * 0.85)
+  -- Adjust scale for plate
+  drawPolygonTransformed(BASIC_PLATE, cx, cy + halfH * 0.05, halfW * 0.78, halfH * 0.85)
 
   love.graphics.setColor(0, 0, 0, alpha)
   love.graphics.circle("fill", cx - halfW * 0.28, cy - halfH * 0.1, halfH * 0.12)
@@ -117,7 +130,7 @@ local function drawAlienTank(alien, x, y, w, h, color, alpha)
   local halfW, halfH = w / 2, h / 2
 
   love.graphics.setColor(color[1], color[2], color[3], alpha)
-  drawNormalizedPolygon(TANK_BODY, cx, cy, halfW, halfH)
+  drawPolygonTransformed(TANK_BODY, cx, cy, halfW, halfH)
 
   local dr, dg, db = shadeColor(color, -0.2)
   love.graphics.setColor(dr, dg, db, alpha)
@@ -125,11 +138,11 @@ local function drawAlienTank(alien, x, y, w, h, color, alpha)
 
   local lr, lg, lb = shadeColor(color, 0.15)
   love.graphics.setColor(lr, lg, lb, alpha)
-  drawNormalizedPolygon(TANK_PLATE, cx, cy, halfW * 0.8, halfH * 0.9)
+  drawPolygonTransformed(TANK_PLATE, cx, cy, halfW * 0.8, halfH * 0.9)
 
   local turretHeight = halfH * 0.5
   love.graphics.setColor(dr, dg, db, alpha)
-  drawNormalizedPolygon(TANK_TURRET, cx, cy - halfH * 0.2, halfW * 0.4, halfH * 0.9)
+  drawPolygonTransformed(TANK_TURRET, cx, cy - halfH * 0.2, halfW * 0.4, halfH * 0.9)
 
   love.graphics.setColor(dr, dg, db, alpha)
   love.graphics.rectangle("fill", cx - halfW * 0.05, y - halfH * 0.2, halfW * 0.1, turretHeight)
@@ -141,17 +154,13 @@ local function drawAlienSpeedy(alien, x, y, w, h, color, alpha)
   local halfW, halfH = w / 2, h / 2
 
   love.graphics.setColor(color[1], color[2], color[3], alpha)
-  drawNormalizedPolygon(SPEEDY_FUSELAGE, cx, cy, halfW * 0.9, halfH)
+  drawPolygonTransformed(SPEEDY_FUSELAGE, cx, cy, halfW * 0.9, halfH)
 
   local lr, lg, lb = shadeColor(color, 0.22)
   love.graphics.setColor(lr, lg, lb, alpha)
-  drawNormalizedPolygon(SPEEDY_WING, cx, cy + halfH * 0.15, halfW, halfH)
-  local mirrored = {}
-  for i = 1, #SPEEDY_WING do
-    local point = SPEEDY_WING[i]
-    mirrored[i] = { -point[1], point[2] }
-  end
-  drawNormalizedPolygon(mirrored, cx, cy + halfH * 0.15, halfW, halfH)
+  drawPolygonTransformed(SPEEDY_WING, cx, cy + halfH * 0.15, halfW, halfH)
+  -- Mirror wing by negative width scale
+  drawPolygonTransformed(SPEEDY_WING, cx, cy + halfH * 0.15, -halfW, halfH)
 
   love.graphics.setColor(0, 0, 0, alpha)
   love.graphics.circle("fill", cx, cy - halfH * 0.3, halfH * 0.14)
@@ -169,11 +178,11 @@ local function drawAlienSniper(alien, x, y, w, h, color, alpha)
   local halfW, halfH = w / 2, h / 2
 
   love.graphics.setColor(color[1], color[2], color[3], alpha)
-  drawNormalizedPolygon(SNIPER_CORE, cx, cy, halfW, halfH)
+  drawPolygonTransformed(SNIPER_CORE, cx, cy, halfW, halfH)
 
   local lr, lg, lb = shadeColor(color, 0.18)
   love.graphics.setColor(lr, lg, lb, alpha)
-  drawNormalizedPolygon(SNIPER_SCOPE, cx, cy - halfH * 0.1, halfW * 0.8, halfH * 0.85)
+  drawPolygonTransformed(SNIPER_SCOPE, cx, cy - halfH * 0.1, halfW * 0.8, halfH * 0.85)
 
   love.graphics.setColor(1, 1, 1, alpha * 0.7)
   love.graphics.circle("line", cx, cy - halfH * 0.35, halfH * 0.35)
@@ -187,7 +196,7 @@ local function drawAlienGhost(alien, x, y, w, h, color, alpha)
 
   local baseAlpha = alpha * 0.85
   love.graphics.setColor(color[1], color[2], color[3], baseAlpha)
-  drawNormalizedPolygon(GHOST_HULL, cx, cy, halfW, halfH)
+  drawPolygonTransformed(GHOST_HULL, cx, cy, halfW, halfH)
 
   local wave = math.sin((alien.phaseTimer or 0) * 4 + cx * 0.02) * 0.08
   local lr, lg, lb = shadeColor(color, 0.15)
@@ -312,7 +321,7 @@ end
 
 function Aliens.init(virtualW, virtualH)
   VIRTUAL_WIDTH, VIRTUAL_HEIGHT = virtualW or 1280, virtualH or 720
-  local Waves = require('src.game.waves')
+  -- Waves already required
   local cfg = Waves.configFor(1)
   formation.dir = 1 -- horizontal marching enabled
   formation.speed = cfg.formationSpeed
@@ -348,7 +357,7 @@ end
 
 function Aliens.update(dt)
   -- Apply time warp effect
-  local Events = require("src.game.events")
+  -- Events already required
   local timeFactor = Events.getTimeWarpFactor()
   local adjustedDt = dt * timeFactor
   

@@ -1,0 +1,24 @@
+{
+  "name": "neon-invaders",
+  "version": "1.0.0",
+  "description": "A retro-style space invaders game built with LÖVE 2D (11.x). Features neon aesthetics, wave-based gameplay, power-ups, and multiple platforms including desktop, Android, and web export.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MichaelFisher1997/neon-invaders.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/MichaelFisher1997/neon-invaders/issues"
+  },
+  "homepage": "https://github.com/MichaelFisher1997/neon-invaders#readme",
+  "devDependencies": {
+    "@expo/cli": "^54.0.14"
+  }
+}
